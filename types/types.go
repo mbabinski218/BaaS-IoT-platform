@@ -7,30 +7,33 @@ import (
 )
 
 type Device struct {
-	ID        uuid.UUID `json:"id"`
+	Id        uuid.UUID `json:"id"`
 	Name      string    `json:"name"`
 	Type      string    `json:"type"`
 	CreatedAt time.Time `json:"createdAt"`
 }
 
+type DeviceType string
+
 type IotData struct {
-	EncryptedData string `json:"encrypted_data"`
-	PublicKey     string `json:"public_key"`
-	Signature     string `json:"signature"`
-	Type          string `json:"type"`
+	DeviceId   uuid.UUID      `json:"device_id"`
+	DeviceType DeviceType     `json:"device_type"`
+	Region     string         `json:"region"`
+	Data       map[string]any `json:"data"`
+	PublicKey  string         `json:"public_key"`
+	Signature  string         `json:"signature"`
 }
 
-type DeviceStore interface {
-	IsDeviceRegistered(id int) (*Device, error)
-	GetDeviceByID(id int) (*Device, error)
-	RegisterDevice(Device) error
-	PushData(data IotData) error
+type Client interface {
+	Register(Device) error
+	IsDeviceRegistered(id uuid.UUID) (*Device, error)
+	GetDevice(id uuid.UUID) (*Device, error)
+	Send(data IotData) error
+	GetData(deviceType DeviceType, region string) (*IotData, error)
 }
 
 type RegisterDevicePayload struct {
-	Name        string  `json:"name" validate:"required"`
-	Description string  `json:"description"`
-	Image       string  `json:"image"`
-	Price       float64 `json:"price" validate:"required"`
-	Quantity    int     `json:"quantity" validate:"required"`
+}
+
+type NewDataPayload struct {
 }
