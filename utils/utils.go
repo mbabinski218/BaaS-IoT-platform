@@ -1,9 +1,11 @@
 package utils
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/go-playground/validator/v10"
 )
@@ -31,7 +33,7 @@ func ParseJSON(r *http.Request, v any) error {
 func GetTokenFromRequest(r *http.Request) string {
 	tokenAuth := r.Header.Get("Authorization")
 	tokenQuery := r.URL.Query().Get("token")
-	
+
 	if tokenAuth != "" {
 		return tokenAuth
 	}
@@ -41,4 +43,21 @@ func GetTokenFromRequest(r *http.Request) string {
 	}
 
 	return ""
+}
+
+func StringToBytes32(hexStr string) ([32]byte, error) {
+	var b32 [32]byte
+
+	hexStr = strings.TrimPrefix(hexStr, "0x")
+
+	bytes, err := hex.DecodeString(hexStr)
+	if err != nil {
+		return b32, err
+	}
+	if len(bytes) != 32 {
+		return b32, fmt.Errorf("invalid length: got %d, expected 32", len(bytes))
+	}
+
+	copy(b32[:], bytes)
+	return b32, nil
 }

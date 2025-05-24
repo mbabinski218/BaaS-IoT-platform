@@ -8,11 +8,13 @@ import (
 )
 
 type Config struct {
-	PublicHost             string
-	Port                   string
-	JWTSecret              string
-	JWTExpirationInSeconds int64
-	BlockchainURL          string
+	PublicHost            string
+	Port                  string
+	BlockchainUrl         string
+	BlockchainPrivateKey  string
+	MongoDbUri            string
+	MongoDbName           string
+	MongoDbCollectionName string
 }
 
 var Envs = initConfig()
@@ -21,11 +23,13 @@ func initConfig() Config {
 	godotenv.Load()
 
 	return Config{
-		PublicHost:             getEnv("PUBLIC_HOST", "http://localhost"),
-		Port:                   getEnv("PORT", "8080"),
-		JWTSecret:              getEnv("JWT_SECRET", "super-super-secret-key!!!"),
-		JWTExpirationInSeconds: getEnvAsInt("JWT_EXPIRATION_IN_SECONDS", 3600*24*7),
-		BlockchainURL:          getEnv("BLOCKCHAIN_URL", "http://localhost:8545"),
+		PublicHost:            getEnv("PUBLIC_HOST", ""),
+		Port:                  getEnv("PORT", "8080"),
+		BlockchainUrl:         getEnv("BLOCKCHAIN_URL", ""),
+		BlockchainPrivateKey:  getEnv("BLOCKCHAIN_PRIVATE_KEY", ""),
+		MongoDbUri:            getEnv("MONGO_URI", ""),
+		MongoDbName:           getEnv("MONGO_DB_NAME", ""),
+		MongoDbCollectionName: getEnv("MONGO_COLLECTION_NAME", ""),
 	}
 }
 
