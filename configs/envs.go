@@ -9,7 +9,6 @@ import (
 
 type Config struct {
 	PublicHost            string
-	Port                  string
 	BlockchainUrl         string
 	BlockchainPrivateKey  string
 	MongoDbUri            string
@@ -20,11 +19,10 @@ type Config struct {
 var Envs = initConfig()
 
 func initConfig() Config {
-	godotenv.Load()
+	godotenv.Load("../.env")
 
 	return Config{
 		PublicHost:            getEnv("PUBLIC_HOST", ""),
-		Port:                  getEnv("PORT", "8080"),
 		BlockchainUrl:         getEnv("BLOCKCHAIN_URL", ""),
 		BlockchainPrivateKey:  getEnv("BLOCKCHAIN_PRIVATE_KEY", ""),
 		MongoDbUri:            getEnv("MONGO_URI", ""),

@@ -30,8 +30,7 @@ func (s *APIServer) Run() error {
 
 	deviceHandler := device.NewHandler(s.blockchain, s.database)
 	deviceHandler.TestRoutes(subrouter)
-	deviceHandler.SendRoutes(subrouter)
-	//deviceHandler.RegisterRoutes(subrouter)
+	deviceHandler.DataRoutes(subrouter)
 
 	router.PathPrefix("/").Handler(http.FileServer(http.Dir("static")))
 

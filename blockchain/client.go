@@ -21,6 +21,9 @@ type Client struct {
 }
 
 func NewEthClient(url string, privateKeyHex string, contractAddress string) (*Client, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
 	client, err := ethclient.Dial(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to RPC: %w", err)
@@ -31,7 +34,7 @@ func NewEthClient(url string, privateKeyHex string, contractAddress string) (*Cl
 		return nil, fmt.Errorf("invalid private key: %w", err)
 	}
 
-	chainID, err := client.NetworkID(context.Background())
+	chainID, err := client.NetworkID(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get chain ID: %w", err)
 	}
@@ -40,6 +43,8 @@ func NewEthClient(url string, privateKeyHex string, contractAddress string) (*Cl
 	if err != nil {
 		return nil, fmt.Errorf("failed to create transactor: %w", err)
 	}
+
+	auth.GasLimit = 3000000
 
 	var contract *dataHashRegistry.DataHashRegistry
 	var contractAddr common.Address
@@ -59,6 +64,7 @@ func NewEthClient(url string, privateKeyHex string, contractAddress string) (*Cl
 		fmt.Println("Using existing contract at:", contractAddr.Hex())
 	}
 
+	print("Ethereum client created successfully\n")
 	return &Client{
 		ethClient:        client,
 		dataHashRegistry: contract,
@@ -72,7 +78,7 @@ func (c *Client) SetGasLimit(gasLimit uint64) {
 }
 
 func (c *Client) Send(dataId uuid.UUID, hash [32]byte, deviceId uuid.UUID) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
 
 	opt := bind.TransactOpts{
@@ -98,6 +104,18 @@ func (c *Client) Send(dataId uuid.UUID, hash [32]byte, deviceId uuid.UUID) error
 
 	fmt.Println("Transaction hash:", transaction.Hash().Hex())
 	return nil
+}
+
+func (c *Client) VerifyHash(dataId uuid.UUID, hash [32]byte) (bool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	exists, err := c.dataHashRegistry.VerifyHash(&bind.CallOpts{Context: ctx}, dataId, hash)
+	if err != nil {
+		return false, fmt.Errorf("failed to verify hash: %w", err)
+	}
+
+	return exists, nil
 }
 
 // func (Client) Send(iotData types.IotData) {

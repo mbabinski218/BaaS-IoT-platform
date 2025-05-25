@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	blockchain "github.com/sikozonpc/ecom/blockchain"
 	"github.com/sikozonpc/ecom/database"
@@ -28,12 +29,9 @@ func (h *Handler) TestRoutes(router *mux.Router) {
 	router.HandleFunc("/test", h.handleTest).Methods("GET")
 }
 
-func (h *Handler) RegisterRoutes(router *mux.Router) {
-	router.HandleFunc("/register", h.handleRegister).Methods("POST")
-}
-
-func (h *Handler) SendRoutes(router *mux.Router) {
+func (h *Handler) DataRoutes(router *mux.Router) {
 	router.HandleFunc("/send", h.handleSend).Methods("POST")
+	router.HandleFunc("/get/{dataId}", h.handleGet).Methods("GET")
 }
 
 func (h *Handler) handleSend(w http.ResponseWriter, r *http.Request) {
@@ -72,38 +70,52 @@ func (h *Handler) handleTest(w http.ResponseWriter, r *http.Request) {
 	utils.WriteJSON(w, http.StatusOK, nil)
 }
 
-func (h *Handler) handleRegister(w http.ResponseWriter, r *http.Request) {
-	// 	var device types.RegisterDevicePayload
-	// 	if err := utils.ParseJSON(r, &device); err != nil {
-	// 		utils.WriteError(w, http.StatusBadRequest, err)
-	// 		return
-	// 	}
+func (h *Handler) handleGet(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	dataId := vars["dataId"]
+	if dataId == "" {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("dataId is required"))
+		return
+	}
 
-	// 	if err := utils.Validate.Struct(device); err != nil {
-	// 		errors := err.(validator.ValidationErrors)
-	// 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid payload: %v", errors))
-	// 		return
-	// 	}
+	uuid, err := uuid.Parse(dataId)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid dataId format: %v", err))
+		return
+	}
 
-	// 	// DODAWANIE DO BLOCKCHAIN NOWEGO URZADZENIA!
+	doc, err := h.database.Get(uuid)
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("failed to get data from database: %v", err))
+		return
+	}
 
-	// 	utils.WriteJSON(w, http.StatusCreated, nil)
+	if doc == nil {
+		utils.WriteError(w, http.StatusNotFound, fmt.Errorf("data not found for id: %s", dataId))
+		return
+	}
+
+	// data, ok := doc["data"]
+	// if !ok {
+	// 	utils.WriteError(w, http.StatusNotFound, fmt.Errorf("data field not found for id: %s", dataId))
+	// 	return
 	// }
 
-	// func (h *Handler) SendData(w http.ResponseWriter, r *http.Request) {
-	// 	var data types.IotData
-	// 	if err := utils.ParseJSON(r, &data); err != nil {
-	// 		utils.WriteError(w, http.StatusBadRequest, err)
-	// 		return
-	// 	}
+	hash, err := utils.CalculateHash(doc)
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("failed to calculate hash: %v", err))
+		return
+	}
 
-	// 	if err := utils.Validate.Struct(data); err != nil {
-	// 		errors := err.(validator.ValidationErrors)
-	// 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid payload: %v", errors))
-	// 		return
-	// 	}
+	success, err := h.blockchain.VerifyHash(uuid, hash)
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("failed to verify hash on blockchain: %v", err))
+		return
+	}
+	if !success {
+		utils.WriteError(w, http.StatusNotFound, fmt.Errorf("hash not found on blockchain for dataId: %s", dataId))
+		return
+	}
 
-	// 	// h.client.Send(data)
-
-	// 	utils.WriteJSON(w, http.StatusOK, nil)
+	utils.WriteJSON(w, http.StatusOK, doc)
 }

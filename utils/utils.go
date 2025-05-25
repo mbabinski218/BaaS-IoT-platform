@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -60,4 +61,22 @@ func StringToBytes32(hexStr string) ([32]byte, error) {
 
 	copy(b32[:], bytes)
 	return b32, nil
+}
+
+func Bytes32ToString(b32 [32]byte) string {
+	hexStr := hex.EncodeToString(b32[:])
+	if len(hexStr) < 64 {
+		hexStr = strings.Repeat("0", 64-len(hexStr)) + hexStr
+	}
+	return "0x" + hexStr
+}
+
+func CalculateHash(data any) ([32]byte, error) {
+	dataBytes, err := json.Marshal(data)
+	if err != nil {
+		return [32]byte{}, fmt.Errorf("failed to marshal data: %w", err)
+	}
+
+	hash := sha256.Sum256(dataBytes)
+	return hash, nil
 }

@@ -4,23 +4,28 @@ services:
     container_name: ethereum-node-1
     ports:
       - "8545:8545"
+      - "30303:30303"
     volumes:
       - ./genesis.json:/genesis/genesis.json
       - ./entrypoint.sh:/entrypoint.sh
       - geth1-data:/data
     entrypoint: ["sh", "/entrypoint.sh"]
 
-  ethereum-node-2:
-    image: ethereum/client-go
-    container_name: ethereum-node-2
-    ports:
-      - "8546:8545"
-    volumes:
-      - ./genesis.json:/genesis/genesis.json
-      - ./entrypoint.sh:/entrypoint.sh
-      - geth2-data:/data
-    entrypoint: ["sh", "/entrypoint.sh"]
-
 volumes:
   geth1-data:
-  geth2-data:
+
+#   ethereum-node-2:
+#     image: ethereum/client-go
+#     container_name: ethereum-node-2
+#     ports:
+#       - "8546:8545"
+#       - "30304:30303"
+#     volumes:
+#       - ./genesis.json:/genesis/genesis.json
+#       - ./entrypoint.sh:/entrypoint.sh
+#       - geth2-data:/data
+#     entrypoint: ["sh", "/entrypoint.sh"]
+
+# volumes:
+#   geth1-data:
+#   geth2-data:

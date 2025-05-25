@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/sikozonpc/ecom/api"
@@ -21,7 +20,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	server := api.NewAPIServer(fmt.Sprintf(":%s", configs.Envs.Port), ethClient, databaseClient)
+	server := api.NewAPIServer(configs.Envs.PublicHost, ethClient, databaseClient)
 	if err := server.Run(); err != nil {
 		log.Fatal(err)
 	}

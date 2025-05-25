@@ -31,7 +31,7 @@ def send_data_loop(device_index, device_type, device_id, frequency, backend_url,
         format="SubjectPublicKeyInfo"
     ).decode()
 
-    response = requests.post(f"{backend_url}/register", json={
+    response = requests.post(f"{backend_url}/api/v1/send", json={
         "device_type": device_type,
         "region": "us-east-1",
         "public_key": public_pem
