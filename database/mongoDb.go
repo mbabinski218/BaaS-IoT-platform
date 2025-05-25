@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"slices"
+
 	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -26,11 +28,36 @@ func Connect(uri, dbName, collectionName string) (*Client, error) {
 		return nil, fmt.Errorf("MongoDB connect error: %v", err)
 	}
 
+	if err := ensureCollectionExists(client.Database(dbName), collectionName); err != nil {
+		return nil, fmt.Errorf("ensure collection exists error: %v", err)
+	}
+
 	collection := client.Database(dbName).Collection(collectionName)
 	return &Client{
 		client:     client,
 		collection: collection,
 	}, nil
+}
+
+func ensureCollectionExists(db *mongo.Database, collectionName string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	collections, err := db.ListCollectionNames(ctx, bson.M{})
+	if err != nil {
+		return fmt.Errorf("failed to list collections: %w", err)
+	}
+
+	if slices.Contains(collections, collectionName) {
+		return nil
+	}
+
+	err = db.CreateCollection(ctx, collectionName)
+	if err != nil {
+		return fmt.Errorf("failed to create collection: %w", err)
+	}
+
+	return nil
 }
 
 func (c *Client) Add(dataId uuid.UUID, data map[string]any, deviceId uuid.UUID) error {
