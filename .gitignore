@@ -4,3 +4,4 @@ bin
 tmp
 ecom
 cmd/*.exe
+simulators/__pycache__/*

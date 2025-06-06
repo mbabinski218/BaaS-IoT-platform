@@ -3,6 +3,7 @@ package services
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
@@ -25,16 +26,14 @@ func NewHandler(bc *blockchain.Client, db *database.Client) *Handler {
 	}
 }
 
-func (h *Handler) TestRoutes(router *mux.Router) {
-	router.HandleFunc("/test", h.handleTest).Methods("GET")
-}
-
 func (h *Handler) DataRoutes(router *mux.Router) {
 	router.HandleFunc("/send", h.handleSend).Methods("POST")
 	router.HandleFunc("/get/{dataId}", h.handleGet).Methods("GET")
 }
 
 func (h *Handler) handleSend(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+
 	var payload types.NewDataPayload
 	if err := utils.ParseJSON(r, &payload); err != nil {
 		utils.WriteError(w, http.StatusBadRequest, err)
@@ -53,24 +52,33 @@ func (h *Handler) handleSend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.database.Add(payload.DataId, payload.Data, payload.DeviceId); err != nil {
+	mongoDuration, err := h.database.Add(payload.DataId, payload.Data, payload.DeviceId)
+	if err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("failed to add data to database: %v", err))
 		return
 	}
 
-	if err := h.blockchain.Send(payload.DataId, hash, payload.DeviceId); err != nil {
+	blockchainDuration, blockchainSendDuration, blockchainMinedDuration, err := h.blockchain.Send(payload.DataId, hash, payload.DeviceId)
+	if err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("failed to add data hash to blockchain: %v", err))
 		return
 	}
 
 	utils.WriteJSON(w, http.StatusCreated, nil)
-}
 
-func (h *Handler) handleTest(w http.ResponseWriter, r *http.Request) {
-	utils.WriteJSON(w, http.StatusOK, nil)
+	duration := time.Since(start)
+
+	println("-------- Data sent successfully --------")
+	println("MongoDB duration:", mongoDuration, " (", mongoDuration.Milliseconds(), " ms)")
+	println("Blockchain duration:", blockchainDuration, " (", blockchainDuration.Milliseconds(), " ms)")
+	println("Blockchain send duration:", blockchainSendDuration, " (", blockchainSendDuration.Milliseconds(), " ms)")
+	println("Blockchain mined duration:", blockchainMinedDuration, " (", blockchainMinedDuration.Milliseconds(), " ms)")
+	println("Total duration:", duration, " (", duration.Milliseconds(), " ms)")
 }
 
 func (h *Handler) handleGet(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+
 	vars := mux.Vars(r)
 	dataId := vars["dataId"]
 	if dataId == "" {
@@ -84,7 +92,7 @@ func (h *Handler) handleGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	doc, err := h.database.Get(uuid)
+	doc, mongoDuration, err := h.database.Get(uuid)
 	if err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("failed to get data from database: %v", err))
 		return
@@ -95,27 +103,27 @@ func (h *Handler) handleGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// data, ok := doc["data"]
-	// if !ok {
-	// 	utils.WriteError(w, http.StatusNotFound, fmt.Errorf("data field not found for id: %s", dataId))
-	// 	return
-	// }
-
 	hash, err := utils.CalculateHash(doc)
 	if err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("failed to calculate hash: %v", err))
 		return
 	}
 
-	success, err := h.blockchain.VerifyHash(uuid, hash)
+	success, blockchainDuration, err := h.blockchain.VerifyHash(uuid, hash)
 	if err != nil {
-		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("failed to verify hash on blockchain: %v", err))
+		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("blockchain error: %v", err))
 		return
 	}
 	if !success {
-		utils.WriteError(w, http.StatusNotFound, fmt.Errorf("hash not found on blockchain for dataId: %s", dataId))
+		utils.WriteError(w, http.StatusNotFound, fmt.Errorf("blockchain - hash not found or invalid for dataId: %s", dataId))
 		return
 	}
 
 	utils.WriteJSON(w, http.StatusOK, doc)
+
+	duration := time.Since(start)
+	println("-------- Data retrieved successfully --------")
+	println("MongoDB duration:", mongoDuration, " (", mongoDuration.Milliseconds(), " ms)")
+	println("Blockchain duration:", blockchainDuration, " (", blockchainDuration.Milliseconds(), " ms)")
+	println("Total duration:", duration, " (", duration.Milliseconds(), " ms)")
 }

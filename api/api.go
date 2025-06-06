@@ -29,7 +29,6 @@ func (s *APIServer) Run() error {
 	subrouter := router.PathPrefix("/api/v1").Subrouter()
 
 	deviceHandler := device.NewHandler(s.blockchain, s.database)
-	deviceHandler.TestRoutes(subrouter)
 	deviceHandler.DataRoutes(subrouter)
 
 	router.PathPrefix("/").Handler(http.FileServer(http.Dir("static")))

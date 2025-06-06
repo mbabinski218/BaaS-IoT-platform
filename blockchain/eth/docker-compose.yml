@@ -1,6 +1,6 @@
 services:
   ethereum-node-1:
-    image: ethereum/client-go
+    image: ethereum/client-go:v1.12.0
     container_name: ethereum-node-1
     ports:
       - "8545:8545"

@@ -77,7 +77,9 @@ func (c *Client) SetGasLimit(gasLimit uint64) {
 	c.auth.GasLimit = gasLimit
 }
 
-func (c *Client) Send(dataId uuid.UUID, hash [32]byte, deviceId uuid.UUID) error {
+func (c *Client) Send(dataId uuid.UUID, hash [32]byte, deviceId uuid.UUID) (time.Duration, time.Duration, time.Duration, error) {
+	start := time.Now()
+
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
 
@@ -89,33 +91,43 @@ func (c *Client) Send(dataId uuid.UUID, hash [32]byte, deviceId uuid.UUID) error
 		GasPrice: c.auth.GasPrice,
 	}
 
+	sendStart := time.Now()
 	transaction, err := c.dataHashRegistry.StoreHash(&opt, dataId, hash, deviceId)
 	if err != nil {
-		return fmt.Errorf("transaction send error: %w", err)
+		return 0, 0, 0, fmt.Errorf("transaction send error: %w", err)
 	}
+	sendDuration := time.Since(sendStart)
 
+	mineStart := time.Now()
 	receipt, err := bind.WaitMined(ctx, c.ethClient, transaction)
 	if err != nil {
-		return fmt.Errorf("wait mined error: %w", err)
+		return 0, 0, 0, fmt.Errorf("wait mined error: %w", err)
 	}
 	if receipt.Status != 1 {
-		return fmt.Errorf("transaction failed: %s", transaction.Hash().Hex())
+		return 0, 0, 0, fmt.Errorf("transaction failed: %s", transaction.Hash().Hex())
 	}
+	mineDuration := time.Since(mineStart)
 
 	fmt.Println("Transaction hash:", transaction.Hash().Hex())
-	return nil
+
+	duration := time.Since(start)
+	return duration, sendDuration, mineDuration, nil
 }
 
-func (c *Client) VerifyHash(dataId uuid.UUID, hash [32]byte) (bool, error) {
+func (c *Client) VerifyHash(dataId uuid.UUID, hash [32]byte) (bool, time.Duration, error) {
+	start := time.Now()
+
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	exists, err := c.dataHashRegistry.VerifyHash(&bind.CallOpts{Context: ctx}, dataId, hash)
 	if err != nil {
-		return false, fmt.Errorf("failed to verify hash: %w", err)
+		return false, 0, fmt.Errorf("failed to verify hash: %w", err)
 	}
 
-	return exists, nil
+	duration := time.Since(start)
+
+	return exists, duration, nil
 }
 
 // func (Client) Send(iotData types.IotData) {

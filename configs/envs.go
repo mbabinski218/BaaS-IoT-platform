@@ -8,12 +8,13 @@ import (
 )
 
 type Config struct {
-	PublicHost            string
-	BlockchainUrl         string
-	BlockchainPrivateKey  string
-	MongoDbUri            string
-	MongoDbName           string
-	MongoDbCollectionName string
+	PublicHost                string
+	BlockchainUrl             string
+	BlockchainPrivateKey      string
+	BlockchainContractAddress string
+	MongoDbUri                string
+	MongoDbName               string
+	MongoDbCollectionName     string
 }
 
 var Envs = initConfig()
@@ -22,12 +23,13 @@ func initConfig() Config {
 	godotenv.Load("../.env")
 
 	return Config{
-		PublicHost:            getEnv("PUBLIC_HOST", ""),
-		BlockchainUrl:         getEnv("BLOCKCHAIN_URL", ""),
-		BlockchainPrivateKey:  getEnv("BLOCKCHAIN_PRIVATE_KEY", ""),
-		MongoDbUri:            getEnv("MONGO_URI", ""),
-		MongoDbName:           getEnv("MONGO_DB_NAME", ""),
-		MongoDbCollectionName: getEnv("MONGO_COLLECTION_NAME", ""),
+		PublicHost:                getEnv("PUBLIC_HOST", ""),
+		BlockchainUrl:             getEnv("BLOCKCHAIN_URL", ""),
+		BlockchainPrivateKey:      getEnv("BLOCKCHAIN_PRIVATE_KEY", ""),
+		BlockchainContractAddress: getEnv("BLOCKCHAIN_CONTRACT_ADDRESS", ""),
+		MongoDbUri:                getEnv("MONGO_URI", ""),
+		MongoDbName:               getEnv("MONGO_DB_NAME", ""),
+		MongoDbCollectionName:     getEnv("MONGO_COLLECTION_NAME", ""),
 	}
 }
 

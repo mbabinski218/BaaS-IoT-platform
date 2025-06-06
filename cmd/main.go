@@ -15,7 +15,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	ethClient, err := blockchain.NewEthClient(configs.Envs.BlockchainUrl, configs.Envs.BlockchainPrivateKey, "")
+	ethClient, err := blockchain.NewEthClient(configs.Envs.BlockchainUrl, configs.Envs.BlockchainPrivateKey, configs.Envs.BlockchainContractAddress)
 	if err != nil {
 		log.Fatal(err)
 	}
