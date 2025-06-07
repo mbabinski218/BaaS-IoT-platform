@@ -68,12 +68,12 @@ func (h *Handler) handleSend(w http.ResponseWriter, r *http.Request) {
 
 	duration := time.Since(start)
 
-	println("-------- Data sent successfully --------")
-	println("MongoDB duration:", mongoDuration, " (", mongoDuration.Milliseconds(), " ms)")
-	println("Blockchain duration:", blockchainDuration, " (", blockchainDuration.Milliseconds(), " ms)")
-	println("Blockchain send duration:", blockchainSendDuration, " (", blockchainSendDuration.Milliseconds(), " ms)")
-	println("Blockchain mined duration:", blockchainMinedDuration, " (", blockchainMinedDuration.Milliseconds(), " ms)")
-	println("Total duration:", duration, " (", duration.Milliseconds(), " ms)")
+	fmt.Println("-------- Data sent successfully --------")
+	fmt.Println("MongoDB duration:", mongoDuration, " (", mongoDuration.Milliseconds(), " ms)")
+	fmt.Println("Blockchain duration:", blockchainDuration, " (", blockchainDuration.Milliseconds(), " ms)")
+	fmt.Println("Blockchain send duration:", blockchainSendDuration, " (", blockchainSendDuration.Milliseconds(), " ms)")
+	fmt.Println("Blockchain mined duration:", blockchainMinedDuration, " (", blockchainMinedDuration.Milliseconds(), " ms)")
+	fmt.Println("Total duration:", duration, " (", duration.Milliseconds(), " ms)")
 }
 
 func (h *Handler) handleGet(w http.ResponseWriter, r *http.Request) {
@@ -122,8 +122,8 @@ func (h *Handler) handleGet(w http.ResponseWriter, r *http.Request) {
 	utils.WriteJSON(w, http.StatusOK, doc)
 
 	duration := time.Since(start)
-	println("-------- Data retrieved successfully --------")
-	println("MongoDB duration:", mongoDuration, " (", mongoDuration.Milliseconds(), " ms)")
-	println("Blockchain duration:", blockchainDuration, " (", blockchainDuration.Milliseconds(), " ms)")
-	println("Total duration:", duration, " (", duration.Milliseconds(), " ms)")
+	fmt.Println("-------- Data retrieved successfully --------")
+	fmt.Println("MongoDB duration:", mongoDuration, " (", mongoDuration.Milliseconds(), " ms)")
+	fmt.Println("Blockchain duration:", blockchainDuration, " (", blockchainDuration.Milliseconds(), " ms)")
+	fmt.Println("Total duration:", duration, " (", duration.Milliseconds(), " ms)")
 }

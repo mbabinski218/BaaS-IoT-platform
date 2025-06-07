@@ -9,12 +9,16 @@ import (
 
 type Config struct {
 	PublicHost                string
-	BlockchainUrl             string
-	BlockchainPrivateKey      string
-	BlockchainContractAddress string
 	MongoDbUri                string
 	MongoDbName               string
 	MongoDbCollectionName     string
+	BlockchainEnabled         bool
+	BlockchainUrl             string
+	BlockchainPrivateKey      string
+	BlockchainContractAddress string
+	AuditEnabled              bool
+	AuditTimeout              int64
+	AuditSize                 int64
 }
 
 var Envs = initConfig()
@@ -24,12 +28,16 @@ func initConfig() Config {
 
 	return Config{
 		PublicHost:                getEnv("PUBLIC_HOST", ""),
-		BlockchainUrl:             getEnv("BLOCKCHAIN_URL", ""),
-		BlockchainPrivateKey:      getEnv("BLOCKCHAIN_PRIVATE_KEY", ""),
-		BlockchainContractAddress: getEnv("BLOCKCHAIN_CONTRACT_ADDRESS", ""),
 		MongoDbUri:                getEnv("MONGO_URI", ""),
 		MongoDbName:               getEnv("MONGO_DB_NAME", ""),
 		MongoDbCollectionName:     getEnv("MONGO_COLLECTION_NAME", ""),
+		BlockchainEnabled:         getEnvAsBool("BLOCKCHAIN_ENABLED", false),
+		BlockchainUrl:             getEnv("BLOCKCHAIN_URL", ""),
+		BlockchainPrivateKey:      getEnv("BLOCKCHAIN_PRIVATE_KEY", ""),
+		BlockchainContractAddress: getEnv("BLOCKCHAIN_CONTRACT_ADDRESS", ""),
+		AuditEnabled:              getEnvAsBool("AUDIT_ENABLED", false),
+		AuditTimeout:              getEnvAsInt("AUDIT_TIMEOUT", 3600000),
+		AuditSize:                 getEnvAsInt("AUDIT_SIZE", 1000),
 	}
 }
 
@@ -49,6 +57,19 @@ func getEnvAsInt(key string, fallback int64) int64 {
 		}
 
 		return i
+	}
+
+	return fallback
+}
+
+func getEnvAsBool(key string, fallback bool) bool {
+	if value, ok := os.LookupEnv(key); ok {
+		b, err := strconv.ParseBool(value)
+		if err != nil {
+			return fallback
+		}
+
+		return b
 	}
 
 	return fallback

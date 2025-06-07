@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"slices"
 	"time"
 
@@ -37,7 +38,7 @@ func Connect(uri, dbName, collectionName string) (*Client, error) {
 
 	collection := client.Database(dbName).Collection(collectionName)
 
-	print("MongoDB connected successfully\n")
+	log.Println("MongoDB connected successfully")
 	return &Client{
 		client:     client,
 		collection: collection,
@@ -79,9 +80,9 @@ func (c *Client) Add(dataId uuid.UUID, data map[string]any, deviceId uuid.UUID) 
 	_, err := c.collection.InsertOne(ctx, doc)
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
-			fmt.Println("Insert timed out")
+			log.Println("Insert timed out")
 		} else if errors.Is(err, context.Canceled) {
-			fmt.Println("Insert canceled")
+			log.Println("Insert canceled")
 		} else {
 			fmt.Printf("Insert error: %v\n", err)
 		}
