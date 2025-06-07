@@ -33,7 +33,7 @@ func (s *APIServer) Run() error {
 
 	router.PathPrefix("/").Handler(http.FileServer(http.Dir("static")))
 
-	log.Println("Listening on", s.address)
+	log.Println("Listening on", "http://"+s.address)
 
 	return http.ListenAndServe(s.address, router)
 }

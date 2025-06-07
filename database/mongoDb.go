@@ -9,7 +9,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/sikozonpc/ecom/types"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -114,4 +116,43 @@ func (c *Client) Get(dataId uuid.UUID) (map[string]any, time.Duration, error) {
 	duration := time.Since(start)
 
 	return result.Data, duration, nil
+}
+
+func (c *Client) GetAuditData(n int64) ([]types.AuditData, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	pipeline := mongo.Pipeline{
+		{{Key: "$sample", Value: bson.D{{Key: "size", Value: n}}}},
+		{{Key: "$project", Value: bson.D{
+			{Key: "_id", Value: 1},
+			{Key: "data", Value: 1},
+		}}},
+	}
+
+	cursor, err := c.collection.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var rawData []map[string]any
+	if err = cursor.All(ctx, &rawData); err != nil {
+		return nil, err
+	}
+
+	var results []types.AuditData
+	for _, r := range rawData {
+		uuid, err := uuid.FromBytes(r["_id"].(primitive.Binary).Data)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert record Id to UUID: %v", err)
+		}
+
+		results = append(results, types.AuditData{
+			Id:   uuid,
+			Data: r["data"].(map[string]any),
+		})
+	}
+
+	return results, nil
 }

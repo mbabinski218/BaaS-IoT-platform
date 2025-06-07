@@ -7,6 +7,7 @@ import (
 	"github.com/sikozonpc/ecom/blockchain"
 	"github.com/sikozonpc/ecom/configs"
 	"github.com/sikozonpc/ecom/database"
+	"github.com/sikozonpc/ecom/worker"
 )
 
 func main() {
@@ -18,6 +19,13 @@ func main() {
 	ethClient, err := blockchain.NewEthClient(configs.Envs.BlockchainUrl, configs.Envs.BlockchainPrivateKey, configs.Envs.BlockchainContractAddress)
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	workers := []worker.Worker{
+		worker.NewAuditWorker(configs.Envs.AuditTimeout, configs.Envs.AuditSize, databaseClient, ethClient),
+	}
+	for _, w := range workers {
+		go w.Start()
 	}
 
 	server := api.NewAPIServer(configs.Envs.PublicHost, ethClient, databaseClient)

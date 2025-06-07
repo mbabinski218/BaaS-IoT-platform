@@ -69,11 +69,11 @@ func (h *Handler) handleSend(w http.ResponseWriter, r *http.Request) {
 	duration := time.Since(start)
 
 	fmt.Println("-------- Data sent successfully --------")
-	fmt.Println("MongoDB duration:", mongoDuration, " (", mongoDuration.Milliseconds(), " ms)")
-	fmt.Println("Blockchain duration:", blockchainDuration, " (", blockchainDuration.Milliseconds(), " ms)")
-	fmt.Println("Blockchain send duration:", blockchainSendDuration, " (", blockchainSendDuration.Milliseconds(), " ms)")
-	fmt.Println("Blockchain mined duration:", blockchainMinedDuration, " (", blockchainMinedDuration.Milliseconds(), " ms)")
-	fmt.Println("Total duration:", duration, " (", duration.Milliseconds(), " ms)")
+	fmt.Println("MongoDB duration:", mongoDuration)
+	fmt.Println("Blockchain duration:", blockchainDuration)
+	fmt.Println("Blockchain send duration:", blockchainSendDuration)
+	fmt.Println("Blockchain mined duration:", blockchainMinedDuration)
+	fmt.Println("Total duration:", duration)
 }
 
 func (h *Handler) handleGet(w http.ResponseWriter, r *http.Request) {
@@ -123,7 +123,7 @@ func (h *Handler) handleGet(w http.ResponseWriter, r *http.Request) {
 
 	duration := time.Since(start)
 	fmt.Println("-------- Data retrieved successfully --------")
-	fmt.Println("MongoDB duration:", mongoDuration, " (", mongoDuration.Milliseconds(), " ms)")
-	fmt.Println("Blockchain duration:", blockchainDuration, " (", blockchainDuration.Milliseconds(), " ms)")
-	fmt.Println("Total duration:", duration, " (", duration.Milliseconds(), " ms)")
+	fmt.Println("MongoDB duration:", mongoDuration)
+	fmt.Println("Blockchain duration:", blockchainDuration)
+	fmt.Println("Total duration:", duration)
 }
