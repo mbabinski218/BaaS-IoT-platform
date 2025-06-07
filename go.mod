@@ -1,4 +1,4 @@
-module github.com/sikozonpc/ecom
+module github.com/mbabinski218/BaaS-IoT-platform
 
 go 1.23.0
 

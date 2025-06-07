@@ -5,9 +5,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/sikozonpc/ecom/blockchain"
-	"github.com/sikozonpc/ecom/database"
-	"github.com/sikozonpc/ecom/utils"
+	"github.com/mbabinski218/BaaS-IoT-platform/blockchain"
+	"github.com/mbabinski218/BaaS-IoT-platform/database"
+	"github.com/mbabinski218/BaaS-IoT-platform/utils"
 )
 
 type AuditWorker struct {

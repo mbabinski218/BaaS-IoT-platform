@@ -11,8 +11,8 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/google/uuid"
-	dataHashRegistry "github.com/sikozonpc/ecom/blockchain/smartContracts"
-	"github.com/sikozonpc/ecom/configs"
+	dataHashRegistry "github.com/mbabinski218/BaaS-IoT-platform/blockchain/smartContracts"
+	"github.com/mbabinski218/BaaS-IoT-platform/configs"
 )
 
 type Client struct {

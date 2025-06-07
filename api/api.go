@@ -5,9 +5,9 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	blockchain "github.com/sikozonpc/ecom/blockchain"
-	"github.com/sikozonpc/ecom/database"
-	device "github.com/sikozonpc/ecom/services"
+	blockchain "github.com/mbabinski218/BaaS-IoT-platform/blockchain"
+	"github.com/mbabinski218/BaaS-IoT-platform/database"
+	device "github.com/mbabinski218/BaaS-IoT-platform/services"
 )
 
 type APIServer struct {

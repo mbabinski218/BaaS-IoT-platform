@@ -3,11 +3,11 @@ package main
 import (
 	"log"
 
-	"github.com/sikozonpc/ecom/api"
-	"github.com/sikozonpc/ecom/blockchain"
-	"github.com/sikozonpc/ecom/configs"
-	"github.com/sikozonpc/ecom/database"
-	"github.com/sikozonpc/ecom/worker"
+	"github.com/mbabinski218/BaaS-IoT-platform/api"
+	"github.com/mbabinski218/BaaS-IoT-platform/blockchain"
+	"github.com/mbabinski218/BaaS-IoT-platform/configs"
+	"github.com/mbabinski218/BaaS-IoT-platform/database"
+	"github.com/mbabinski218/BaaS-IoT-platform/worker"
 )
 
 func main() {

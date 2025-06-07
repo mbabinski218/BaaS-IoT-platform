@@ -8,10 +8,10 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
-	blockchain "github.com/sikozonpc/ecom/blockchain"
-	"github.com/sikozonpc/ecom/database"
-	"github.com/sikozonpc/ecom/types"
-	"github.com/sikozonpc/ecom/utils"
+	blockchain "github.com/mbabinski218/BaaS-IoT-platform/blockchain"
+	"github.com/mbabinski218/BaaS-IoT-platform/database"
+	"github.com/mbabinski218/BaaS-IoT-platform/types"
+	"github.com/mbabinski218/BaaS-IoT-platform/utils"
 )
 
 type Handler struct {
