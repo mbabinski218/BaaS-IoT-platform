@@ -12,7 +12,7 @@ type NewDataPayload struct {
 	// Signature string         `json:"signature"`
 }
 
-type AuditData struct {
+type DocData struct {
 	Id   uuid.UUID      `json:"_id"`
 	Data map[string]any `json:"data"`
 }

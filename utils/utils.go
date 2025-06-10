@@ -10,6 +10,8 @@ import (
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 var Validate = validator.New()
@@ -72,4 +74,8 @@ func CalculateHash(data any) ([32]byte, error) {
 
 	hash := sha256.Sum256(dataBytes)
 	return hash, nil
+}
+
+func ToBinaryUUID(u uuid.UUID) primitive.Binary {
+	return primitive.Binary{Subtype: 4, Data: u[:]}
 }

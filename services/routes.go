@@ -29,6 +29,7 @@ func NewHandler(bc *blockchain.Client, db *database.Client) *Handler {
 func (h *Handler) DataRoutes(router *mux.Router) {
 	router.HandleFunc("/send", h.handleSend).Methods("POST")
 	router.HandleFunc("/get/{dataId}", h.handleGet).Methods("GET")
+	router.HandleFunc("/get", h.handleGetFromTo).Methods("GET")
 }
 
 func (h *Handler) handleSend(w http.ResponseWriter, r *http.Request) {
@@ -125,5 +126,55 @@ func (h *Handler) handleGet(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("-------- Data retrieved successfully --------")
 	fmt.Println("MongoDB duration:", mongoDuration)
 	fmt.Println("Blockchain duration:", blockchainDuration)
+	fmt.Println("Total duration:", duration)
+}
+
+func (h *Handler) handleGetFromTo(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+
+	from := r.URL.Query().Get("from")
+	to := r.URL.Query().Get("to")
+
+	if from == "" || to == "" {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("both 'from' and 'to' query parameters are required"))
+		return
+	}
+	fromTimestamp, err := time.Parse(time.RFC3339, from)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid 'from' timestamp format: %v", err))
+		return
+	}
+	toTimestamp, err := time.Parse(time.RFC3339, to)
+	if err != nil {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid 'to' timestamp format: %v", err))
+		return
+	}
+
+	docs, mongoDuration, err := h.database.GetFromTo(fromTimestamp, toTimestamp)
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("failed to get data from database: %v", err))
+		return
+	}
+
+	if len(docs) == 0 {
+		utils.WriteError(w, http.StatusNotFound, fmt.Errorf("no data found between %s and %s", from, to))
+		return
+	}
+
+	// if err != nil {
+	// 	utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("blockchain error: %v", err))
+	// 	return
+	// }
+	// if !success {
+	// 	utils.WriteError(w, http.StatusNotFound, fmt.Errorf("blockchain - hashes not found or invalid for range: %s to %s", from, to))
+	// 	return
+	// }
+
+	utils.WriteJSON(w, http.StatusOK, docs)
+
+	duration := time.Since(start)
+	fmt.Println("-------- Data retrieved successfully --------")
+	fmt.Println("MongoDB duration:", mongoDuration)
+	// fmt.Println("Blockchain duration:", blockchainDuration)
 	fmt.Println("Total duration:", duration)
 }
