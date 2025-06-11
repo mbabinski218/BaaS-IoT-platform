@@ -13,6 +13,8 @@ import (
 	"github.com/google/uuid"
 	dataHashRegistry "github.com/mbabinski218/BaaS-IoT-platform/blockchain/smartContracts"
 	"github.com/mbabinski218/BaaS-IoT-platform/configs"
+	"github.com/mbabinski218/BaaS-IoT-platform/types"
+	"github.com/mbabinski218/BaaS-IoT-platform/utils"
 )
 
 type Client struct {
@@ -23,7 +25,7 @@ type Client struct {
 }
 
 func NewEthClient(url string, privateKeyHex string, contractAddress string) (*Client, error) {
-	if !configs.Envs.BlockchainEnabled {
+	if configs.Envs.BlockchainMode == types.BCNone {
 		log.Println("Blockchain client is disabled")
 		return nil, nil
 	}
@@ -81,7 +83,7 @@ func NewEthClient(url string, privateKeyHex string, contractAddress string) (*Cl
 }
 
 func (c *Client) SetGasLimit(gasLimit uint64) {
-	if !configs.Envs.BlockchainEnabled {
+	if configs.Envs.BlockchainMode == types.BCNone {
 		return
 	}
 
@@ -89,7 +91,7 @@ func (c *Client) SetGasLimit(gasLimit uint64) {
 }
 
 func (c *Client) Send(dataId uuid.UUID, hash [32]byte, deviceId uuid.UUID) (time.Duration, time.Duration, time.Duration, error) {
-	if !configs.Envs.BlockchainEnabled {
+	if configs.Envs.BlockchainMode == types.BCNone {
 		return 0, 0, 0, nil
 	}
 
@@ -130,7 +132,7 @@ func (c *Client) Send(dataId uuid.UUID, hash [32]byte, deviceId uuid.UUID) (time
 }
 
 func (c *Client) VerifyHash(dataId uuid.UUID, hash [32]byte) (bool, time.Duration, error) {
-	if !configs.Envs.BlockchainEnabled {
+	if configs.Envs.BlockchainMode == types.BCNone {
 		return true, 0, nil
 	}
 
@@ -147,4 +149,58 @@ func (c *Client) VerifyHash(dataId uuid.UUID, hash [32]byte) (bool, time.Duratio
 	duration := time.Since(start)
 
 	return exists, duration, nil
+}
+
+func (c *Client) VerifyHashes(docs []types.DocData) (bool, time.Duration, error) {
+	start := time.Now()
+
+	var success bool
+	var duration time.Duration
+	var err error
+
+	switch configs.Envs.BlockchainMode {
+	case types.BCFullCheck:
+		success, err = executeBlockchainFullCheck(c, docs)
+	case types.BCLightCheck:
+		success, err = executeBlockchainLightCheck(c, docs)
+	case types.BCBatchCheck:
+		success, err = executeBlockchainBatchCheck(c, docs)
+	}
+
+	duration = time.Since(start)
+	return success, duration, err
+}
+
+func executeBlockchainFullCheck(c *Client, docs []types.DocData) (bool, error) {
+	result := true
+
+	for _, doc := range docs {
+		hash, err := utils.CalculateHash(doc.Data)
+		if err != nil {
+			log.Printf("failed to calculate hash for doc with id: %v, hash: %x\n", doc.Id, hash)
+			result = false
+			continue
+		}
+
+		success, _, err := c.VerifyHash(doc.Id, hash)
+		if err != nil {
+			log.Printf("failed to verify hash for doc with id: %v, hash: %x\n", doc.Id, hash)
+			result = false
+			continue
+		}
+		if !success {
+			log.Printf("Blockchain check failed for doc with id: %v, hash: %x\n", doc.Id, hash)
+			result = false
+		}
+	}
+
+	return result, nil
+}
+
+func executeBlockchainLightCheck(c *Client, docs []types.DocData) (bool, error) {
+	return false, nil
+}
+
+func executeBlockchainBatchCheck(c *Client, docs []types.DocData) (bool, error) {
+	return false, nil
 }

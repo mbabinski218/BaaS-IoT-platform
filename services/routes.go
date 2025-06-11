@@ -161,20 +161,21 @@ func (h *Handler) handleGetFromTo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// if err != nil {
-	// 	utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("blockchain error: %v", err))
-	// 	return
-	// }
-	// if !success {
-	// 	utils.WriteError(w, http.StatusNotFound, fmt.Errorf("blockchain - hashes not found or invalid for range: %s to %s", from, to))
-	// 	return
-	// }
+	success, blockchainDuration, err := h.blockchain.VerifyHashes(docs)
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("blockchain error: %v", err))
+		return
+	}
+	if !success {
+		utils.WriteError(w, http.StatusNotFound, fmt.Errorf("blockchain - failed to verify hashes for documents in the specified range"))
+		return
+	}
 
 	utils.WriteJSON(w, http.StatusOK, docs)
 
 	duration := time.Since(start)
 	fmt.Println("-------- Data retrieved successfully --------")
 	fmt.Println("MongoDB duration:", mongoDuration)
-	// fmt.Println("Blockchain duration:", blockchainDuration)
+	fmt.Println("Blockchain duration:", blockchainDuration)
 	fmt.Println("Total duration:", duration)
 }

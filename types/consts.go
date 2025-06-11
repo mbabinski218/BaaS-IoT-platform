@@ -1,3 +1,8 @@
 package types
 
-const ()
+const (
+	BCNone BlockchainMode = iota
+	BCLightCheck
+	BCFullCheck
+	BCBatchCheck
+)

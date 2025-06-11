@@ -4,6 +4,8 @@ import (
 	"github.com/google/uuid"
 )
 
+type BlockchainMode int
+
 type NewDataPayload struct {
 	DeviceId uuid.UUID      `json:"device_id"`
 	Data     map[string]any `json:"data"`

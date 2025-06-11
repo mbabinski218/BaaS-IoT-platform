@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/joho/godotenv"
+	"github.com/mbabinski218/BaaS-IoT-platform/types"
 )
 
 type Config struct {
@@ -12,7 +13,7 @@ type Config struct {
 	MongoDbUri                string
 	MongoDbName               string
 	MongoDbCollectionName     string
-	BlockchainEnabled         bool
+	BlockchainMode            types.BlockchainMode
 	BlockchainUrl             string
 	BlockchainPrivateKey      string
 	BlockchainContractAddress string
@@ -31,7 +32,7 @@ func initConfig() Config {
 		MongoDbUri:                getEnv("MONGO_URI", ""),
 		MongoDbName:               getEnv("MONGO_DB_NAME", ""),
 		MongoDbCollectionName:     getEnv("MONGO_COLLECTION_NAME", ""),
-		BlockchainEnabled:         getEnvAsBool("BLOCKCHAIN_ENABLED", false),
+		BlockchainMode:            getEnvAsBCMode("BLOCKCHAIN_MODE", types.BCNone),
 		BlockchainUrl:             getEnv("BLOCKCHAIN_URL", ""),
 		BlockchainPrivateKey:      getEnv("BLOCKCHAIN_PRIVATE_KEY", ""),
 		BlockchainContractAddress: getEnv("BLOCKCHAIN_CONTRACT_ADDRESS", ""),
@@ -70,6 +71,25 @@ func getEnvAsBool(key string, fallback bool) bool {
 		}
 
 		return b
+	}
+
+	return fallback
+}
+
+func getEnvAsBCMode(key string, fallback types.BlockchainMode) types.BlockchainMode {
+	if value, ok := os.LookupEnv(key); ok {
+		switch value {
+		case "None":
+			return types.BCNone
+		case "Light":
+			return types.BCLightCheck
+		case "Full":
+			return types.BCFullCheck
+		case "Batch":
+			return types.BCBatchCheck
+		default:
+			return fallback
+		}
 	}
 
 	return fallback
