@@ -31,8 +31,8 @@ var (
 
 // DataHashRegistryMetaData contains all meta data concerning the DataHashRegistry contract.
 var DataHashRegistryMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[{\"internalType\":\"bytes16\",\"name\":\"\",\"type\":\"bytes16\"}],\"name\":\"records\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"dataHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes16\",\"name\":\"iotId\",\"type\":\"bytes16\"},{\"internalType\":\"uint256\",\"name\":\"timestamp\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes16\",\"name\":\"id\",\"type\":\"bytes16\"},{\"internalType\":\"bytes32\",\"name\":\"dataHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes16\",\"name\":\"iotId\",\"type\":\"bytes16\"}],\"name\":\"storeHash\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes16\",\"name\":\"id\",\"type\":\"bytes16\"},{\"internalType\":\"bytes32\",\"name\":\"providedHash\",\"type\":\"bytes32\"}],\"name\":\"verifyHash\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
-	Bin: "0x6080604052348015600e575f5ffd5b506105c48061001c5f395ff3fe608060405234801561000f575f5ffd5b506004361061003f575f3560e01c80632269a1e114610043578063b1932b251461005f578063dd864ab21461008f575b5f5ffd5b61005d60048036038101906100589190610372565b6100c2565b005b610079600480360381019061007491906103c2565b61024c565b604051610086919061041a565b60405180910390f35b6100a960048036038101906100a49190610433565b610290565b6040516100b994939291906104d3565b60405180910390f35b5f5f5f856fffffffffffffffffffffffffffffffff19166fffffffffffffffffffffffffffffffff191681526020019081526020015f20600201541461013d576040517f08c379a000000000000000000000000000000000000000000000000000000000815260040161013490610570565b60405180910390fd5b6040518060800160405280838152602001826fffffffffffffffffffffffffffffffff191681526020014281526020013373ffffffffffffffffffffffffffffffffffffffff168152505f5f856fffffffffffffffffffffffffffffffff19166fffffffffffffffffffffffffffffffff191681526020019081526020015f205f820151815f01556020820151816001015f6101000a8154816fffffffffffffffffffffffffffffffff021916908360801c0217905550604082015181600201556060820151816003015f6101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff160217905550905050505050565b5f815f5f856fffffffffffffffffffffffffffffffff19166fffffffffffffffffffffffffffffffff191681526020019081526020015f205f015414905092915050565b5f602052805f5260405f205f91509050805f015490806001015f9054906101000a900460801b90806002015490806003015f9054906101000a900473ffffffffffffffffffffffffffffffffffffffff16905084565b5f5ffd5b5f7fffffffffffffffffffffffffffffffff0000000000000000000000000000000082169050919050565b61031e816102ea565b8114610328575f5ffd5b50565b5f8135905061033981610315565b92915050565b5f819050919050565b6103518161033f565b811461035b575f5ffd5b50565b5f8135905061036c81610348565b92915050565b5f5f5f60608486031215610389576103886102e6565b5b5f6103968682870161032b565b93505060206103a78682870161035e565b92505060406103b88682870161032b565b9150509250925092565b5f5f604083850312156103d8576103d76102e6565b5b5f6103e58582860161032b565b92505060206103f68582860161035e565b9150509250929050565b5f8115159050919050565b61041481610400565b82525050565b5f60208201905061042d5f83018461040b565b92915050565b5f60208284031215610448576104476102e6565b5b5f6104558482850161032b565b91505092915050565b6104678161033f565b82525050565b610476816102ea565b82525050565b5f819050919050565b61048e8161047c565b82525050565b5f73ffffffffffffffffffffffffffffffffffffffff82169050919050565b5f6104bd82610494565b9050919050565b6104cd816104b3565b82525050565b5f6080820190506104e65f83018761045e565b6104f3602083018661046d565b6105006040830185610485565b61050d60608301846104c4565b95945050505050565b5f82825260208201905092915050565b7f4861736820616c72656164792065786973747320666f722074686973204964005f82015250565b5f61055a601f83610516565b915061056582610526565b602082019050919050565b5f6020820190508181035f8301526105878161054e565b905091905056fea26469706673582212201f0dd6e90a1e423e867c5a3f7d6e5e692cd59c65417b0652c2e4303c58281c1a64736f6c634300081e0033",
+	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes16\",\"name\":\"id\",\"type\":\"bytes16\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"dataHash\",\"type\":\"bytes32\"}],\"name\":\"HashStored\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"bytes16\",\"name\":\"\",\"type\":\"bytes16\"}],\"name\":\"records\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"dataHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes16\",\"name\":\"iotId\",\"type\":\"bytes16\"},{\"internalType\":\"uint256\",\"name\":\"timestamp\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes16\",\"name\":\"id\",\"type\":\"bytes16\"},{\"internalType\":\"bytes32\",\"name\":\"dataHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes16\",\"name\":\"iotId\",\"type\":\"bytes16\"}],\"name\":\"storeHash\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes16\",\"name\":\"id\",\"type\":\"bytes16\"},{\"internalType\":\"bytes32\",\"name\":\"providedHash\",\"type\":\"bytes32\"}],\"name\":\"verifyHash\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
+	Bin: "0x6080604052348015600e575f5ffd5b506106288061001c5f395ff3fe608060405234801561000f575f5ffd5b506004361061003f575f3560e01c80632269a1e114610043578063b1932b251461005f578063dd864ab21461008f575b5f5ffd5b61005d600480360381019061005891906103bd565b6100c2565b005b6100796004803603810190610074919061040d565b610297565b6040516100869190610465565b60405180910390f35b6100a960048036038101906100a4919061047e565b6102db565b6040516100b9949392919061051e565b60405180910390f35b5f5f5f856fffffffffffffffffffffffffffffffff19166fffffffffffffffffffffffffffffffff191681526020019081526020015f20600201541461013d576040517f08c379a0000000000000000000000000000000000000000000000000000000008152600401610134906105bb565b60405180910390fd5b6040518060800160405280838152602001826fffffffffffffffffffffffffffffffff191681526020014281526020013373ffffffffffffffffffffffffffffffffffffffff168152505f5f856fffffffffffffffffffffffffffffffff19166fffffffffffffffffffffffffffffffff191681526020019081526020015f205f820151815f01556020820151816001015f6101000a8154816fffffffffffffffffffffffffffffffff021916908360801c0217905550604082015181600201556060820151816003015f6101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff160217905550905050826fffffffffffffffffffffffffffffffff19167fe2d3c54e250a34c193a79d28f9c0ca4dedc53ef3b02a88cdc9d349bb906fe5c88360405161028a91906105d9565b60405180910390a2505050565b5f815f5f856fffffffffffffffffffffffffffffffff19166fffffffffffffffffffffffffffffffff191681526020019081526020015f205f015414905092915050565b5f602052805f5260405f205f91509050805f015490806001015f9054906101000a900460801b90806002015490806003015f9054906101000a900473ffffffffffffffffffffffffffffffffffffffff16905084565b5f5ffd5b5f7fffffffffffffffffffffffffffffffff0000000000000000000000000000000082169050919050565b61036981610335565b8114610373575f5ffd5b50565b5f8135905061038481610360565b92915050565b5f819050919050565b61039c8161038a565b81146103a6575f5ffd5b50565b5f813590506103b781610393565b92915050565b5f5f5f606084860312156103d4576103d3610331565b5b5f6103e186828701610376565b93505060206103f2868287016103a9565b925050604061040386828701610376565b9150509250925092565b5f5f6040838503121561042357610422610331565b5b5f61043085828601610376565b9250506020610441858286016103a9565b9150509250929050565b5f8115159050919050565b61045f8161044b565b82525050565b5f6020820190506104785f830184610456565b92915050565b5f6020828403121561049357610492610331565b5b5f6104a084828501610376565b91505092915050565b6104b28161038a565b82525050565b6104c181610335565b82525050565b5f819050919050565b6104d9816104c7565b82525050565b5f73ffffffffffffffffffffffffffffffffffffffff82169050919050565b5f610508826104df565b9050919050565b610518816104fe565b82525050565b5f6080820190506105315f8301876104a9565b61053e60208301866104b8565b61054b60408301856104d0565b610558606083018461050f565b95945050505050565b5f82825260208201905092915050565b7f4861736820616c72656164792065786973747320666f722074686973204964005f82015250565b5f6105a5601f83610561565b91506105b082610571565b602082019050919050565b5f6020820190508181035f8301526105d281610599565b9050919050565b5f6020820190506105ec5f8301846104a9565b9291505056fea2646970667358221220722367fdcb9a1c714eccbb390ef427d38b7e9d4532e798e8840046bff84ac11a64736f6c634300081e0033",
 }
 
 // DataHashRegistryABI is the input ABI used to generate the binding from.
@@ -307,4 +307,149 @@ func (_DataHashRegistry *DataHashRegistrySession) StoreHash(id [16]byte, dataHas
 // Solidity: function storeHash(bytes16 id, bytes32 dataHash, bytes16 iotId) returns()
 func (_DataHashRegistry *DataHashRegistryTransactorSession) StoreHash(id [16]byte, dataHash [32]byte, iotId [16]byte) (*types.Transaction, error) {
 	return _DataHashRegistry.Contract.StoreHash(&_DataHashRegistry.TransactOpts, id, dataHash, iotId)
+}
+
+// DataHashRegistryHashStoredIterator is returned from FilterHashStored and is used to iterate over the raw logs and unpacked data for HashStored events raised by the DataHashRegistry contract.
+type DataHashRegistryHashStoredIterator struct {
+	Event *DataHashRegistryHashStored // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *DataHashRegistryHashStoredIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(DataHashRegistryHashStored)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(DataHashRegistryHashStored)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *DataHashRegistryHashStoredIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *DataHashRegistryHashStoredIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// DataHashRegistryHashStored represents a HashStored event raised by the DataHashRegistry contract.
+type DataHashRegistryHashStored struct {
+	Id       [16]byte
+	DataHash [32]byte
+	Raw      types.Log // Blockchain specific contextual infos
+}
+
+// FilterHashStored is a free log retrieval operation binding the contract event 0xe2d3c54e250a34c193a79d28f9c0ca4dedc53ef3b02a88cdc9d349bb906fe5c8.
+//
+// Solidity: event HashStored(bytes16 indexed id, bytes32 dataHash)
+func (_DataHashRegistry *DataHashRegistryFilterer) FilterHashStored(opts *bind.FilterOpts, id [][16]byte) (*DataHashRegistryHashStoredIterator, error) {
+
+	var idRule []interface{}
+	for _, idItem := range id {
+		idRule = append(idRule, idItem)
+	}
+
+	logs, sub, err := _DataHashRegistry.contract.FilterLogs(opts, "HashStored", idRule)
+	if err != nil {
+		return nil, err
+	}
+	return &DataHashRegistryHashStoredIterator{contract: _DataHashRegistry.contract, event: "HashStored", logs: logs, sub: sub}, nil
+}
+
+// WatchHashStored is a free log subscription operation binding the contract event 0xe2d3c54e250a34c193a79d28f9c0ca4dedc53ef3b02a88cdc9d349bb906fe5c8.
+//
+// Solidity: event HashStored(bytes16 indexed id, bytes32 dataHash)
+func (_DataHashRegistry *DataHashRegistryFilterer) WatchHashStored(opts *bind.WatchOpts, sink chan<- *DataHashRegistryHashStored, id [][16]byte) (event.Subscription, error) {
+
+	var idRule []interface{}
+	for _, idItem := range id {
+		idRule = append(idRule, idItem)
+	}
+
+	logs, sub, err := _DataHashRegistry.contract.WatchLogs(opts, "HashStored", idRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(DataHashRegistryHashStored)
+				if err := _DataHashRegistry.contract.UnpackLog(event, "HashStored", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseHashStored is a log parse operation binding the contract event 0xe2d3c54e250a34c193a79d28f9c0ca4dedc53ef3b02a88cdc9d349bb906fe5c8.
+//
+// Solidity: event HashStored(bytes16 indexed id, bytes32 dataHash)
+func (_DataHashRegistry *DataHashRegistryFilterer) ParseHashStored(log types.Log) (*DataHashRegistryHashStored, error) {
+	event := new(DataHashRegistryHashStored)
+	if err := _DataHashRegistry.contract.UnpackLog(event, "HashStored", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
 }

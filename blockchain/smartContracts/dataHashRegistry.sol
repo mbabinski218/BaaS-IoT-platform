@@ -10,12 +10,16 @@ contract DataHashRegistry {
         address sender;
     } 
 
-    mapping(bytes16 => DataRecord) public records; 
+    mapping(bytes16 => DataRecord) public records;
+
+    event HashStored(bytes16 indexed id, bytes32 dataHash);
 
     function storeHash(bytes16 id, bytes32 dataHash, bytes16 iotId) external {
         require(records[id].timestamp == 0, "Hash already exists for this Id");
 
         records[id] = DataRecord(dataHash, iotId, block.timestamp, msg.sender);
+
+        emit HashStored(id, dataHash);
     }
 
     function verifyHash(bytes16 id, bytes32 providedHash) external view returns (bool) {

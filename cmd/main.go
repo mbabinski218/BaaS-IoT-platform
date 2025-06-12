@@ -21,9 +21,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	workers := []worker.Worker{
-		worker.NewAuditWorker(configs.Envs.AuditTimeout, configs.Envs.AuditSize, databaseClient, ethClient),
+	workers := []worker.Worker{}
+
+	if configs.Envs.AuditEnabled {
+		workers = append(workers, worker.NewAuditWorker(configs.Envs.AuditTimeout, configs.Envs.AuditSize, databaseClient, ethClient))
 	}
+
 	for _, w := range workers {
 		go w.Start()
 	}

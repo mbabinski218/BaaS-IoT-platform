@@ -1,2 +1,2 @@
 npx solcjs --bin --abi dataHashRegistry.sol -o build/
-abigen --bin=build/dataHashRegistry_sol_DataHashRegistry.bin --abi=build/dataHashRegistry_sol_DataHashRegistry.abi --pkg=dataHashRegistry --out=dataHashRegistry.go`
+abigen --bin=build/dataHashRegistry_sol_DataHashRegistry.bin --abi=build/dataHashRegistry_sol_DataHashRegistry.abi --pkg=dataHashRegistry --out=dataHashRegistry.go
