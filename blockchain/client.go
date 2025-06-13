@@ -30,6 +30,15 @@ func NewEthClient(url string, privateKeyHex string, contractAddress string) (*Cl
 		return nil, nil
 	}
 
+	switch configs.Envs.BlockchainMode {
+	case types.BCFullCheck:
+		log.Println("Blockchain mode: full")
+	case types.BCLightCheck:
+		log.Println("Blockchain mode: light")
+	case types.BCBatchCheck:
+		log.Println("Blockchain mode: batch")
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
@@ -53,7 +62,8 @@ func NewEthClient(url string, privateKeyHex string, contractAddress string) (*Cl
 		return nil, fmt.Errorf("failed to create transactor: %w", err)
 	}
 
-	auth.GasLimit = 3000000
+	auth.GasLimit = uint64(configs.Envs.BlockchainGasLimit)
+	log.Println("Blockchain gas limit set to:", auth.GasLimit)
 
 	var contract *dataHashRegistry.DataHashRegistry
 	var contractAddr common.Address
@@ -63,14 +73,14 @@ func NewEthClient(url string, privateKeyHex string, contractAddress string) (*Cl
 		if err != nil {
 			return nil, fmt.Errorf("failed to deploy contract: %w", err)
 		}
-		log.Println("Deployed new contract at:", contractAddr.Hex())
+		log.Println("Blockchain deployed new contract at:", contractAddr.Hex())
 	} else {
 		contractAddr = common.HexToAddress(contractAddress)
 		contract, err = dataHashRegistry.NewDataHashRegistry(contractAddr, client)
 		if err != nil {
 			return nil, fmt.Errorf("failed to bind to contract: %w", err)
 		}
-		log.Println("Using existing contract at:", contractAddr.Hex())
+		log.Println("Blockchain using existing contract at:", contractAddr.Hex())
 	}
 
 	log.Println("Ethereum client created successfully")
@@ -80,14 +90,6 @@ func NewEthClient(url string, privateKeyHex string, contractAddress string) (*Cl
 		auth:             auth,
 		address:          contractAddr,
 	}, nil
-}
-
-func (c *Client) SetGasLimit(gasLimit uint64) {
-	if configs.Envs.BlockchainMode == types.BCNone {
-		return
-	}
-
-	c.auth.GasLimit = gasLimit
 }
 
 func (c *Client) Send(dataId uuid.UUID, hash [32]byte, deviceId uuid.UUID) (time.Duration, time.Duration, time.Duration, error) {
@@ -142,6 +144,8 @@ func (c *Client) VerifyHash(dataId uuid.UUID, hash [32]byte) (bool, time.Duratio
 		success, err = verifyHashFullCheck(c, dataId, hash)
 	case types.BCLightCheck:
 		success, err = verifyHashLightCheck(c, dataId, hash)
+	default:
+		success, err = verifyHashFullCheck(c, dataId, hash)
 	}
 
 	duration := time.Since(start)

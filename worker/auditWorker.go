@@ -65,6 +65,6 @@ func (aw *AuditWorker) performAudit() {
 	}
 
 	duration := time.Since(start)
-	fmt.Println("-------- Audit completed successfully --------")
+	fmt.Printf("-------- Audit completed successfully (for: %v docs)--------\n", len(auditData))
 	fmt.Println("Audit duration:", duration)
 }
