@@ -132,31 +132,59 @@ func (c *Client) Send(dataId uuid.UUID, hash [32]byte, deviceId uuid.UUID) (time
 }
 
 func (c *Client) VerifyHash(dataId uuid.UUID, hash [32]byte) (bool, time.Duration, error) {
-	if configs.Envs.BlockchainMode == types.BCNone {
-		return true, 0, nil
-	}
-
 	start := time.Now()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
+	var success bool = true
+	var err error = nil
 
-	exists, err := c.dataHashRegistry.VerifyHash(&bind.CallOpts{Context: ctx}, dataId, hash)
-	if err != nil {
-		return false, 0, fmt.Errorf("failed to verify hash: %w", err)
+	switch configs.Envs.BlockchainMode {
+	case types.BCFullCheck:
+		success, err = verifyHashFullCheck(c, dataId, hash)
+	case types.BCLightCheck:
+		success, err = verifyHashLightCheck(c, dataId, hash)
 	}
 
 	duration := time.Since(start)
 
-	return exists, duration, nil
+	return success, duration, err
+}
+
+func verifyHashFullCheck(c *Client, dataId uuid.UUID, hash [32]byte) (bool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	success, err := c.dataHashRegistry.VerifyHash(&bind.CallOpts{Context: ctx}, dataId, hash)
+	if err != nil {
+		return false, fmt.Errorf("failed to verify hash (full): %w", err)
+	}
+
+	return success, nil
+}
+
+func verifyHashLightCheck(c *Client, dataId uuid.UUID, hash [32]byte) (bool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	events, err := c.dataHashRegistry.FilterHashStored(&bind.FilterOpts{Context: ctx}, [][16]byte{dataId})
+	if err != nil {
+		return false, fmt.Errorf("failed to get events: %w", err)
+	}
+
+	for events.Next() {
+		event := events.Event
+		if event.Id == dataId && event.DataHash == hash {
+			return true, nil
+		}
+	}
+
+	return false, fmt.Errorf("failed to verify hash (light)")
 }
 
 func (c *Client) VerifyHashes(docs []types.DocData) (bool, time.Duration, error) {
 	start := time.Now()
 
-	var success bool
-	var duration time.Duration
-	var err error
+	var success bool = true
+	var err error = nil
 
 	switch configs.Envs.BlockchainMode {
 	case types.BCFullCheck:
@@ -167,7 +195,7 @@ func (c *Client) VerifyHashes(docs []types.DocData) (bool, time.Duration, error)
 		success, err = executeBlockchainBatchCheck(c, docs)
 	}
 
-	duration = time.Since(start)
+	duration := time.Since(start)
 	return success, duration, err
 }
 
@@ -197,8 +225,55 @@ func executeBlockchainFullCheck(c *Client, docs []types.DocData) (bool, error) {
 	return result, nil
 }
 
+type result struct {
+	Success bool
+	Hash    [32]byte
+}
+
 func executeBlockchainLightCheck(c *Client, docs []types.DocData) (bool, error) {
-	return false, nil
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	results := make(map[[16]byte]result, len(docs))
+	ids := make([][16]byte, len(docs))
+
+	for _, doc := range docs {
+		id := doc.Id
+		hash, err := utils.CalculateHash(doc.Data)
+		if err != nil {
+			return false, fmt.Errorf("failed to calculate hash for doc with id: %v, error: %w", doc.Id, err)
+		}
+
+		ids = append(ids, id)
+
+		results[id] = result{
+			Success: false,
+			Hash:    hash,
+		}
+	}
+
+	events, err := c.dataHashRegistry.FilterHashStored(&bind.FilterOpts{Context: ctx}, ids)
+	if err != nil {
+		return false, fmt.Errorf("failed to get events: %w", err)
+	}
+
+	for events.Next() {
+		event := events.Event
+		if res, ok := results[event.Id]; ok {
+			if res.Hash == event.DataHash {
+				res.Success = true
+				results[event.Id] = res
+			}
+		}
+	}
+
+	for id, res := range results {
+		if !res.Success {
+			return false, fmt.Errorf("blockchain check failed for doc with id: %v, hash: %x", id, res.Hash)
+		}
+	}
+
+	return true, nil
 }
 
 func executeBlockchainBatchCheck(c *Client, docs []types.DocData) (bool, error) {

@@ -68,7 +68,7 @@ func ensureCollectionExists(db *mongo.Database, collectionName string) error {
 	return nil
 }
 
-func (c *Client) Add(dataId uuid.UUID, data map[string]any, deviceId uuid.UUID) (time.Duration, error) {
+func (c *Client) Add(dataId uuid.UUID, data map[string]any, deviceId uuid.UUID) (uuid.UUID, time.Duration, error) {
 	start := time.Now()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -80,7 +80,7 @@ func (c *Client) Add(dataId uuid.UUID, data map[string]any, deviceId uuid.UUID) 
 		"data":      data,
 	}
 
-	_, err := c.collection.InsertOne(ctx, doc)
+	res, err := c.collection.InsertOne(ctx, doc)
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
 			log.Println("Insert timed out")
@@ -89,11 +89,16 @@ func (c *Client) Add(dataId uuid.UUID, data map[string]any, deviceId uuid.UUID) 
 		} else {
 			fmt.Printf("Insert error: %v\n", err)
 		}
-		return 0, err
+		return uuid.Nil, 0, err
+	}
+
+	createdId, err := utils.ToUUID(res.InsertedID)
+	if err != nil {
+		return uuid.Nil, 0, fmt.Errorf("failed to convert inserted ID to UUID: %v", err)
 	}
 
 	duration := time.Since(start)
-	return duration, nil
+	return createdId, duration, nil
 }
 
 func (c *Client) Get(dataId uuid.UUID) (map[string]any, time.Duration, error) {
@@ -102,11 +107,13 @@ func (c *Client) Get(dataId uuid.UUID) (map[string]any, time.Duration, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
+	id := utils.ToBinaryUUID(dataId)
+
 	var result struct {
 		Data map[string]any `bson:"data"`
 	}
 
-	err := c.collection.FindOne(ctx, bson.M{"_id": dataId}).Decode(&result)
+	err := c.collection.FindOne(ctx, bson.M{"_id": id}).Decode(&result)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, 0, fmt.Errorf("data with ID %s not found", dataId)

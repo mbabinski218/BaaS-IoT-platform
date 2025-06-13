@@ -53,7 +53,7 @@ func (h *Handler) handleSend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	mongoDuration, err := h.database.Add(payload.DataId, payload.Data, payload.DeviceId)
+	createdId, mongoDuration, err := h.database.Add(payload.DataId, payload.Data, payload.DeviceId)
 	if err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("failed to add data to database: %v", err))
 		return
@@ -65,7 +65,7 @@ func (h *Handler) handleSend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utils.WriteJSON(w, http.StatusCreated, nil)
+	utils.WriteJSON(w, http.StatusCreated, createdId)
 
 	duration := time.Since(start)
 

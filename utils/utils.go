@@ -66,16 +66,30 @@ func StringToBytes32(hexStr string) ([32]byte, error) {
 	return b32, nil
 }
 
-func CalculateHash(data any) ([32]byte, error) {
-	dataBytes, err := cbor.Marshal(data)
+func CalculateHash(data map[string]any) ([32]byte, error) {
+	opts := cbor.CanonicalEncOptions()
+	encMode, err := opts.EncMode()
+	if err != nil {
+		return [32]byte{}, fmt.Errorf("failed to get CBOR encoding mode: %w", err)
+	}
+
+	b, err := encMode.Marshal(data)
 	if err != nil {
 		return [32]byte{}, fmt.Errorf("failed to marshal data: %w", err)
 	}
 
-	hash := sha256.Sum256(dataBytes)
-	return hash, nil
+	return sha256.Sum256(b), nil
 }
 
 func ToBinaryUUID(u uuid.UUID) primitive.Binary {
 	return primitive.Binary{Subtype: 4, Data: u[:]}
+}
+
+func ToUUID(insertedID interface{}) (uuid.UUID, error) {
+	bin, ok := insertedID.(primitive.Binary)
+	if !ok || bin.Subtype != 0x04 || len(bin.Data) != 16 {
+		return uuid.Nil, fmt.Errorf("invalid UUID format: %+v", insertedID)
+	}
+
+	return uuid.FromBytes(bin.Data)
 }

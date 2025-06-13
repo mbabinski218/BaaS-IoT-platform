@@ -46,20 +46,20 @@ func (aw *AuditWorker) performAudit() {
 		return
 	}
 
-	for _, data := range auditData {
-		hash, err := utils.CalculateHash(data)
+	for _, docData := range auditData {
+		hash, err := utils.CalculateHash(docData.Data)
 		if err != nil {
-			fmt.Println("Failed to calculate hash for data Id", data, ":", err)
+			fmt.Println("Failed to calculate hash for data Id", docData.Id, ":", err)
 			continue
 		}
 
-		success, _, err := aw.blockchain.VerifyHash(data.Id, hash)
+		success, _, err := aw.blockchain.VerifyHash(docData.Id, hash)
 		if err != nil {
-			fmt.Println("Failed to update audit status for data Id", data.Id, ":", err)
+			fmt.Println("Failed to update audit status for data Id", docData.Id, ":", err)
 			continue
 		}
 		if !success {
-			fmt.Println("Failed to verify hash for data with Id", data.Id)
+			fmt.Println("Failed to verify hash for data with Id", docData.Id)
 			continue
 		}
 	}

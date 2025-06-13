@@ -18,5 +18,5 @@ def generate_parking_data():
         "disabled_total": 12,
         "electrocharger_occupied": random.randint(0, 5),
         "electrocharger_total": 5,
-        "time": datetime.now().isoformat(),
+        "timestamp": datetime.now().isoformat(),
     }
