@@ -101,6 +101,26 @@ func (c *Client) Add(dataId uuid.UUID, data map[string]any, deviceId uuid.UUID) 
 	return createdId, duration, nil
 }
 
+func (c *Client) Delete(dataId uuid.UUID) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	id := utils.ToBinaryUUID(dataId)
+	_, err := c.collection.DeleteOne(ctx, bson.M{"_id": id})
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return fmt.Errorf("data with id: %s not found", dataId)
+		} else if errors.Is(err, context.DeadlineExceeded) {
+			return fmt.Errorf("delete operation timed out for id: %s", dataId)
+		} else if errors.Is(err, context.Canceled) {
+			return fmt.Errorf("delete operation canceled for id: %s", dataId)
+		}
+		return fmt.Errorf("failed to delete data: %v", err)
+	}
+
+	return nil
+}
+
 func (c *Client) Get(dataId uuid.UUID) (map[string]any, time.Duration, error) {
 	start := time.Now()
 

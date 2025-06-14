@@ -55,13 +55,15 @@ func (h *Handler) handleSend(w http.ResponseWriter, r *http.Request) {
 
 	createdId, mongoDuration, err := h.database.Add(payload.DataId, payload.Data, payload.DeviceId)
 	if err != nil {
-		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("failed to add data to database: %v", err))
+		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("failed to add data with id: %s to database: %w", payload.DataId, err))
 		return
 	}
 
 	blockchainDuration, blockchainSendDuration, blockchainMinedDuration, err := h.blockchain.Send(payload.DataId, hash, payload.DeviceId)
 	if err != nil {
-		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("failed to add data hash to blockchain: %v", err))
+		h.database.Delete(createdId)
+
+		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("failed to add data with id: %s hash to blockchain: %v", payload.DataId, err))
 		return
 	}
 

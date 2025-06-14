@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -22,6 +23,7 @@ type Client struct {
 	dataHashRegistry *dataHashRegistry.DataHashRegistry
 	auth             *bind.TransactOpts
 	address          common.Address
+	nonceManager     *NonceManager
 }
 
 func NewEthClient(url string, privateKeyHex string, contractAddress string) (*Client, error) {
@@ -62,8 +64,20 @@ func NewEthClient(url string, privateKeyHex string, contractAddress string) (*Cl
 		return nil, fmt.Errorf("failed to create transactor: %w", err)
 	}
 
-	auth.GasLimit = uint64(configs.Envs.BlockchainGasLimit)
-	log.Println("Blockchain gas limit set to:", auth.GasLimit)
+	if configs.Envs.BlockchainGasLimit != 0 {
+		auth.GasLimit = uint64(configs.Envs.BlockchainGasLimit)
+		log.Println("Blockchain gas limit set to:", auth.GasLimit)
+	}
+
+	if configs.Envs.BlockchainGasTipCap != 0 {
+		auth.GasTipCap = big.NewInt(configs.Envs.BlockchainGasTipCap)
+		log.Println("Blockchain gas tip cap set to:", auth.GasTipCap)
+	}
+
+	if configs.Envs.BlockchainGasFeeCap != 0 {
+		auth.GasFeeCap = big.NewInt(configs.Envs.BlockchainGasFeeCap)
+		log.Println("Blockchain gas fee cap set to:", auth.GasFeeCap)
+	}
 
 	var contract *dataHashRegistry.DataHashRegistry
 	var contractAddr common.Address
@@ -83,12 +97,18 @@ func NewEthClient(url string, privateKeyHex string, contractAddress string) (*Cl
 		log.Println("Blockchain using existing contract at:", contractAddr.Hex())
 	}
 
+	nm := NewNonceManager()
+	if err := nm.Init(client, auth.From, ctx); err != nil {
+		return nil, fmt.Errorf("failed to initialize nonce manager: %w", err)
+	}
+
 	log.Println("Ethereum client created successfully")
 	return &Client{
 		ethClient:        client,
 		dataHashRegistry: contract,
 		auth:             auth,
 		address:          contractAddr,
+		nonceManager:     nm,
 	}, nil
 }
 
@@ -103,11 +123,13 @@ func (c *Client) Send(dataId uuid.UUID, hash [32]byte, deviceId uuid.UUID) (time
 	defer cancel()
 
 	opt := bind.TransactOpts{
-		Context:  ctx,
-		From:     c.auth.From,
-		Signer:   c.auth.Signer,
-		GasLimit: c.auth.GasLimit,
-		GasPrice: c.auth.GasPrice,
+		Context:   ctx,
+		From:      c.auth.From,
+		Signer:    c.auth.Signer,
+		GasLimit:  c.auth.GasLimit,
+		GasTipCap: c.auth.GasTipCap,
+		GasFeeCap: c.auth.GasFeeCap,
+		Nonce:     c.nonceManager.Next(),
 	}
 
 	sendStart := time.Now()
