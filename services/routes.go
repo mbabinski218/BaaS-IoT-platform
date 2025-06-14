@@ -152,6 +152,16 @@ func (h *Handler) handleGetFromTo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if fromTimestamp.IsZero() || toTimestamp.IsZero() {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("timestamps cannot be zero"))
+	}
+	if fromTimestamp.After(toTimestamp) {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("'from' timestamp cannot be after 'to' timestamp"))
+	}
+	if toTimestamp.Before(fromTimestamp) {
+		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("'to' timestamp cannot be before 'from' timestamp"))
+	}
+
 	docs, mongoDuration, err := h.database.GetFromTo(fromTimestamp, toTimestamp)
 	if err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("failed to get data from database: %v", err))
@@ -163,7 +173,7 @@ func (h *Handler) handleGetFromTo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	success, blockchainDuration, err := h.blockchain.VerifyHashes(docs)
+	success, blockchainDuration, err := h.blockchain.VerifyHashes(docs, fromTimestamp, toTimestamp)
 	if err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("blockchain error: %v", err))
 		return

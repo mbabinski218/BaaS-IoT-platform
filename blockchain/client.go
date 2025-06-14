@@ -24,21 +24,22 @@ type Client struct {
 	auth             *bind.TransactOpts
 	address          common.Address
 	nonceManager     *NonceManager
+	BatchStartTime   time.Time
 }
 
 func NewEthClient(url string, privateKeyHex string, contractAddress string) (*Client, error) {
 	if configs.Envs.BlockchainMode == types.BCNone {
-		log.Println("Blockchain client is disabled")
+		log.Println("Blockchain is disabled")
 		return nil, nil
 	}
 
 	switch configs.Envs.BlockchainMode {
 	case types.BCFullCheck:
-		log.Println("Blockchain mode: full")
+		log.Println("Blockchain mode: Full")
 	case types.BCLightCheck:
-		log.Println("Blockchain mode: light")
+		log.Println("Blockchain mode: Light")
 	case types.BCBatchCheck:
-		log.Println("Blockchain mode: batch")
+		log.Println("Blockchain mode: Batch")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -109,6 +110,7 @@ func NewEthClient(url string, privateKeyHex string, contractAddress string) (*Cl
 		auth:             auth,
 		address:          contractAddr,
 		nonceManager:     nm,
+		BatchStartTime:   time.Time{},
 	}, nil
 }
 
@@ -206,7 +208,7 @@ func verifyHashLightCheck(c *Client, dataId uuid.UUID, hash [32]byte) (bool, err
 	return false, fmt.Errorf("failed to verify hash (light)")
 }
 
-func (c *Client) VerifyHashes(docs []types.DocData) (bool, time.Duration, error) {
+func (c *Client) VerifyHashes(docs []types.DocData, fromTimestamp time.Time, toTimestamp time.Time) (bool, time.Duration, error) {
 	start := time.Now()
 
 	var success bool = true
@@ -218,7 +220,7 @@ func (c *Client) VerifyHashes(docs []types.DocData) (bool, time.Duration, error)
 	case types.BCLightCheck:
 		success, err = executeBlockchainLightCheck(c, docs)
 	case types.BCBatchCheck:
-		success, err = executeBlockchainBatchCheck(c, docs)
+		success, err = executeBlockchainBatchCheck(c, docs, fromTimestamp, toTimestamp)
 	}
 
 	duration := time.Since(start)
@@ -302,6 +304,34 @@ func executeBlockchainLightCheck(c *Client, docs []types.DocData) (bool, error) 
 	return true, nil
 }
 
-func executeBlockchainBatchCheck(c *Client, docs []types.DocData) (bool, error) {
-	return false, nil
+func executeBlockchainBatchCheck(c *Client, docs []types.DocData, fromTimestamp time.Time, toTimestamp time.Time) (bool, error) {
+	// ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	// defer cancel()
+
+	if c.BatchStartTime.IsZero() {
+		return false, fmt.Errorf("batch start time is not set - start the batch worker first")
+	}
+
+	err := verifyTimestamps(c.BatchStartTime, fromTimestamp, toTimestamp)
+	if err != nil {
+		return false, fmt.Errorf("invalid batch timestamps: %w", err)
+	}
+
+	return true, nil
+}
+
+func verifyTimestamps(batchStartTime, from, to time.Time) error {
+	if from.Before(batchStartTime) || to.Before(batchStartTime) {
+		return fmt.Errorf("timestamps must be after the batch start time: %v", batchStartTime)
+	}
+
+	fromDiff := from.Sub(batchStartTime)
+	toDiff := to.Sub(batchStartTime)
+
+	interval := time.Duration(configs.Envs.BlockchainBatchInterval) * time.Minute
+	if fromDiff%interval != 0 || toDiff%interval != 0 {
+		return fmt.Errorf("timestamps must be aligned with the batch interval: %v and start time: %v", interval, batchStartTime)
+	}
+
+	return nil
 }
