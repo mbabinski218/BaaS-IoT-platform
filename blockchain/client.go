@@ -42,7 +42,7 @@ func NewEthClient(url string, privateKeyHex string, contractAddress string) (*Cl
 		log.Println("Blockchain mode: Batch")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(configs.Envs.BlockchainContextTimeout)*time.Second)
 	defer cancel()
 
 	client, err := ethclient.Dial(url)
@@ -121,7 +121,7 @@ func (c *Client) Send(dataId uuid.UUID, hash [32]byte, deviceId uuid.UUID) (time
 
 	start := time.Now()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(configs.Envs.BlockchainContextTimeout)*2*time.Second)
 	defer cancel()
 
 	opt := bind.TransactOpts{
@@ -178,7 +178,7 @@ func (c *Client) VerifyHash(dataId uuid.UUID, hash [32]byte) (bool, time.Duratio
 }
 
 func verifyHashFullCheck(c *Client, dataId uuid.UUID, hash [32]byte) (bool, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(configs.Envs.BlockchainContextTimeout)*time.Second)
 	defer cancel()
 
 	success, err := c.dataHashRegistry.VerifyHash(&bind.CallOpts{Context: ctx}, dataId, hash)
@@ -190,7 +190,7 @@ func verifyHashFullCheck(c *Client, dataId uuid.UUID, hash [32]byte) (bool, erro
 }
 
 func verifyHashLightCheck(c *Client, dataId uuid.UUID, hash [32]byte) (bool, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(configs.Envs.BlockchainContextTimeout)*time.Second)
 	defer cancel()
 
 	events, err := c.dataHashRegistry.FilterHashStored(&bind.FilterOpts{Context: ctx}, [][16]byte{dataId})
@@ -259,7 +259,7 @@ type result struct {
 }
 
 func executeBlockchainLightCheck(c *Client, docs []types.DocData) (bool, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(configs.Envs.BlockchainContextTimeout)*time.Second)
 	defer cancel()
 
 	results := make(map[[16]byte]result, len(docs))
@@ -305,7 +305,7 @@ func executeBlockchainLightCheck(c *Client, docs []types.DocData) (bool, error) 
 }
 
 func executeBlockchainBatchCheck(c *Client, docs []types.DocData, fromTimestamp time.Time, toTimestamp time.Time) (bool, error) {
-	// ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	// ctx, cancel := context.WithTimeout(context.Background(), time.Duration(configs.Envs.BlockchainContextTimeout)*time.Second)
 	// defer cancel()
 
 	if c.BatchStartTime.IsZero() {

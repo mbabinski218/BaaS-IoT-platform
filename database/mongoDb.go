@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/mbabinski218/BaaS-IoT-platform/configs"
 	"github.com/mbabinski218/BaaS-IoT-platform/types"
 	"github.com/mbabinski218/BaaS-IoT-platform/utils"
 	"go.mongodb.org/mongo-driver/bson"
@@ -23,7 +24,7 @@ type Client struct {
 }
 
 func Connect(uri, dbName, collectionName string) (*Client, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(configs.Envs.MongoContextTimeout)*2*time.Second)
 	defer cancel()
 
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(uri))
@@ -49,7 +50,7 @@ func Connect(uri, dbName, collectionName string) (*Client, error) {
 }
 
 func ensureCollectionExists(db *mongo.Database, collectionName string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(configs.Envs.MongoContextTimeout)*time.Second)
 	defer cancel()
 
 	collections, err := db.ListCollectionNames(ctx, bson.M{})
@@ -71,7 +72,7 @@ func ensureCollectionExists(db *mongo.Database, collectionName string) error {
 func (c *Client) Add(dataId uuid.UUID, data map[string]any, deviceId uuid.UUID) (uuid.UUID, time.Duration, error) {
 	start := time.Now()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(configs.Envs.MongoContextTimeout)*time.Second)
 	defer cancel()
 
 	doc := bson.M{
@@ -102,7 +103,7 @@ func (c *Client) Add(dataId uuid.UUID, data map[string]any, deviceId uuid.UUID) 
 }
 
 func (c *Client) Delete(dataId uuid.UUID) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(configs.Envs.MongoContextTimeout)*time.Second)
 	defer cancel()
 
 	id := utils.ToBinaryUUID(dataId)
@@ -124,7 +125,7 @@ func (c *Client) Delete(dataId uuid.UUID) error {
 func (c *Client) Get(dataId uuid.UUID) (map[string]any, time.Duration, error) {
 	start := time.Now()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(configs.Envs.MongoContextTimeout)*time.Second)
 	defer cancel()
 
 	id := utils.ToBinaryUUID(dataId)
@@ -147,7 +148,7 @@ func (c *Client) Get(dataId uuid.UUID) (map[string]any, time.Duration, error) {
 }
 
 func (c *Client) GetAuditData(n int64) ([]types.DocData, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(configs.Envs.MongoContextTimeout)*time.Second)
 	defer cancel()
 
 	pipeline := mongo.Pipeline{
@@ -188,7 +189,7 @@ func (c *Client) GetAuditData(n int64) ([]types.DocData, error) {
 func (c *Client) GetFromTo(from, to time.Time) ([]types.DocData, time.Duration, error) {
 	start := time.Now()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(configs.Envs.MongoContextTimeout)*time.Second)
 	defer cancel()
 
 	pipeline := mongo.Pipeline{
