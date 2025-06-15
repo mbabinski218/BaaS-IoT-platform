@@ -12,7 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/google/uuid"
-	dataHashRegistry "github.com/mbabinski218/BaaS-IoT-platform/blockchain/smartContracts"
+	"github.com/mbabinski218/BaaS-IoT-platform/blockchain/smartContracts"
 	"github.com/mbabinski218/BaaS-IoT-platform/configs"
 	"github.com/mbabinski218/BaaS-IoT-platform/types"
 	"github.com/mbabinski218/BaaS-IoT-platform/utils"
@@ -20,14 +20,16 @@ import (
 
 type Client struct {
 	ethClient        *ethclient.Client
-	dataHashRegistry *dataHashRegistry.DataHashRegistry
+	dataHashRegistry *smartContracts.DataHashRegistry
+	dataHashAddress  common.Address
+	batchRegistry    *smartContracts.BatchRegistry
+	batchAddress     common.Address
 	auth             *bind.TransactOpts
-	address          common.Address
 	nonceManager     *NonceManager
 	BatchStartTime   time.Time
 }
 
-func NewEthClient(url string, privateKeyHex string, contractAddress string) (*Client, error) {
+func NewEthClient(url, privateKeyHex, dataHashContractAddress, batchContractAddress string) (*Client, error) {
 	if configs.Envs.BlockchainMode == types.BCNone {
 		log.Println("Blockchain is disabled")
 		return nil, nil
@@ -80,22 +82,42 @@ func NewEthClient(url string, privateKeyHex string, contractAddress string) (*Cl
 		log.Println("Blockchain gas fee cap set to:", auth.GasFeeCap)
 	}
 
-	var contract *dataHashRegistry.DataHashRegistry
-	var contractAddr common.Address
+	var dataHashContract *smartContracts.DataHashRegistry
+	var dataHashContractAddr common.Address
 
-	if contractAddress == "" {
-		contractAddr, _, contract, err = dataHashRegistry.DeployDataHashRegistry(auth, client)
+	if dataHashContractAddress == "" {
+		dataHashContractAddr, _, dataHashContract, err = smartContracts.DeployDataHashRegistry(auth, client)
 		if err != nil {
-			return nil, fmt.Errorf("failed to deploy contract: %w", err)
+			return nil, fmt.Errorf("failed to deploy dataHashRegistry contract: %w", err)
 		}
-		log.Println("Blockchain deployed new contract at:", contractAddr.Hex())
+		log.Println("Blockchain deployed new dataHashRegistry contract at:", dataHashContractAddr.Hex())
 	} else {
-		contractAddr = common.HexToAddress(contractAddress)
-		contract, err = dataHashRegistry.NewDataHashRegistry(contractAddr, client)
+		dataHashContractAddr = common.HexToAddress(dataHashContractAddress)
+		dataHashContract, err = smartContracts.NewDataHashRegistry(dataHashContractAddr, client)
 		if err != nil {
-			return nil, fmt.Errorf("failed to bind to contract: %w", err)
+			return nil, fmt.Errorf("failed to bind dataHashRegistry contract: %w", err)
 		}
-		log.Println("Blockchain using existing contract at:", contractAddr.Hex())
+		log.Println("Blockchain using existing dataHashRegistry contract at:", dataHashContractAddr.Hex())
+	}
+
+	var batchContract *smartContracts.BatchRegistry
+	var batchContractAddr common.Address
+
+	if configs.Envs.BlockchainMode == types.BCBatchCheck {
+		if batchContractAddress == "" {
+			batchContractAddr, _, batchContract, err = smartContracts.DeployBatchRegistry(auth, client)
+			if err != nil {
+				return nil, fmt.Errorf("failed to deploy batchRegistry contract: %w", err)
+			}
+			log.Println("Blockchain deployed new batchRegistry contract at:", batchContractAddr.Hex())
+		} else {
+			batchContractAddr = common.HexToAddress(batchContractAddress)
+			batchContract, err = smartContracts.NewBatchRegistry(batchContractAddr, client)
+			if err != nil {
+				return nil, fmt.Errorf("failed to bind batchRegistry contract: %w", err)
+			}
+			log.Println("Blockchain using existing batchRegistry contract at:", batchContractAddr.Hex())
+		}
 	}
 
 	nm := NewNonceManager()
@@ -106,9 +128,11 @@ func NewEthClient(url string, privateKeyHex string, contractAddress string) (*Cl
 	log.Println("Ethereum client created successfully")
 	return &Client{
 		ethClient:        client,
-		dataHashRegistry: contract,
+		dataHashRegistry: dataHashContract,
+		dataHashAddress:  dataHashContractAddr,
+		batchRegistry:    batchContract,
+		batchAddress:     batchContractAddr,
 		auth:             auth,
-		address:          contractAddr,
 		nonceManager:     nm,
 		BatchStartTime:   time.Time{},
 	}, nil

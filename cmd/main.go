@@ -19,7 +19,7 @@ func main() {
 	}
 
 	// Blockchain client initialization
-	ethClient, err := blockchain.NewEthClient(configs.Envs.BlockchainUrl, configs.Envs.BlockchainPrivateKey, configs.Envs.BlockchainContractAddress)
+	ethClient, err := blockchain.NewEthClient(configs.Envs.BlockchainUrl, configs.Envs.BlockchainPrivateKey, configs.Envs.BlockchainContractAddress, configs.Envs.BlockchainBatchContractAddress)
 	if err != nil {
 		log.Fatal(err)
 	}
