@@ -371,17 +371,60 @@ func executeBlockchainLightCheck(c *Client, docs []types.DocData) (bool, error) 
 	return true, nil
 }
 
-func executeBlockchainBatchCheck(c *Client, docs []types.DocData, fromTimestamp time.Time, toTimestamp time.Time) (bool, error) {
-	// ctx, cancel := context.WithTimeout(context.Background(), time.Duration(configs.Envs.BlockchainContextTimeout)*time.Second)
-	// defer cancel()
+func executeBlockchainBatchCheck(c *Client, docs []types.DocData, from, to time.Time) (bool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(configs.Envs.BlockchainContextTimeout)*time.Second)
+	defer cancel()
 
-	if c.BatchStartTime.IsZero() {
-		return false, fmt.Errorf("batch start time is not set - start the batch worker first")
-	}
-
-	err := verifyTimestamps(c.BatchStartTime, fromTimestamp, toTimestamp)
+	err := verifyTimestamps(c.BatchStartTime, from, to)
 	if err != nil {
 		return false, fmt.Errorf("invalid batch timestamps: %w", err)
+	}
+
+	interval := time.Duration(configs.Envs.BlockchainBatchInterval) * time.Minute
+	slots := make(map[time.Time][]types.DocData)
+
+	for _, doc := range docs {
+		timestampStr, ok := doc.Data["timestamp"].(string)
+		if !ok {
+			continue
+		}
+
+		timestamp, err := time.Parse(types.TimeLayout, timestampStr)
+		if err != nil {
+			continue
+		}
+
+		if timestamp.Before(from) || !timestamp.Before(to) {
+			continue
+		}
+
+		offset := timestamp.Sub(from)
+		slotIndex := int(offset / interval)
+		slotStart := from.Add(time.Duration(slotIndex) * interval)
+
+		slots[slotStart] = append(slots[slotStart], doc)
+	}
+
+	roots := make(map[time.Time][32]byte)
+	for slotStart, slotDocs := range slots {
+		if len(slotDocs) == 0 {
+			continue
+		}
+		root, _, err := utils.CreateMerkleRoot(slotDocs)
+		if err != nil {
+			return false, fmt.Errorf("failed to create Merkle root for slot starting at %v: %w", slotStart, err)
+		}
+		roots[slotStart] = root
+	}
+
+	for slotStart, root := range roots {
+		success, err := c.batchRegistry.VerifyRoot(&bind.CallOpts{Context: ctx}, big.NewInt(slotStart.Unix()), root)
+		if err != nil {
+			return false, fmt.Errorf("failed to verify root for slot starting at %v: %w", slotStart, err)
+		}
+		if !success {
+			return false, fmt.Errorf("blockchain check failed for slot starting at %v with root %x", slotStart, root)
+		}
 	}
 
 	return true, nil

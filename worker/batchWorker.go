@@ -26,7 +26,7 @@ func NewBatchWorker(interval int64, db *database.Client, bc *blockchain.Client) 
 }
 
 func (bw *BatchWorker) Start() {
-	startTime, _ := time.ParseInLocation(types.TimeLayout, "2025-01-01 00:00:00", time.UTC)
+	startTime, _ := time.ParseInLocation(types.TimeLayout, types.BlockchainBatchStartTime, time.UTC)
 	elapsed := time.Since(startTime)
 
 	interval := time.Duration(bw.Interval) * time.Minute
@@ -51,8 +51,9 @@ func (bw *BatchWorker) Start() {
 func (bw *BatchWorker) performBatch() {
 	start := time.Now()
 
-	now := time.Now().Truncate(time.Minute)
-	docs, _, err := bw.database.GetFromTo(now, now.Add(time.Duration(bw.Interval)*time.Minute))
+	now := time.Now().UTC().Add(2 * time.Hour).Truncate(time.Minute)
+	lastTick := now.Add(-time.Duration(bw.Interval) * time.Minute)
+	docs, _, err := bw.database.GetFromTo(lastTick, now)
 	if err != nil {
 		log.Println("Failed to get batch data:", err)
 		return
@@ -69,7 +70,7 @@ func (bw *BatchWorker) performBatch() {
 		return
 	}
 
-	if err := bw.blockchain.StoreRoot(now, root); err != nil {
+	if err := bw.blockchain.StoreRoot(lastTick, root); err != nil {
 		log.Println("Failed to store root in blockchain:", err)
 		return
 	}

@@ -141,12 +141,12 @@ func (h *Handler) handleGetFromTo(w http.ResponseWriter, r *http.Request) {
 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("both 'from' and 'to' query parameters are required"))
 		return
 	}
-	fromTimestamp, err := time.Parse(time.RFC3339, from)
+	fromTimestamp, err := time.Parse(types.TimeLayout, from)
 	if err != nil {
 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid 'from' timestamp format: %v", err))
 		return
 	}
-	toTimestamp, err := time.Parse(time.RFC3339, to)
+	toTimestamp, err := time.Parse(types.TimeLayout, to)
 	if err != nil {
 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid 'to' timestamp format: %v", err))
 		return
