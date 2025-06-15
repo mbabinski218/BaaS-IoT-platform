@@ -138,17 +138,8 @@ func NewEthClient(url, privateKeyHex, dataHashContractAddress, batchContractAddr
 	}, nil
 }
 
-func (c *Client) Send(dataId uuid.UUID, hash [32]byte, deviceId uuid.UUID) (time.Duration, time.Duration, time.Duration, error) {
-	if configs.Envs.BlockchainMode == types.BCNone {
-		return 0, 0, 0, nil
-	}
-
-	start := time.Now()
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(configs.Envs.BlockchainContextTimeout)*2*time.Second)
-	defer cancel()
-
-	opt := bind.TransactOpts{
+func (c *Client) createOpt(ctx context.Context) bind.TransactOpts {
+	return bind.TransactOpts{
 		Context:   ctx,
 		From:      c.auth.From,
 		Signer:    c.auth.Signer,
@@ -157,6 +148,19 @@ func (c *Client) Send(dataId uuid.UUID, hash [32]byte, deviceId uuid.UUID) (time
 		GasFeeCap: c.auth.GasFeeCap,
 		Nonce:     c.nonceManager.Next(),
 	}
+}
+
+func (c *Client) Send(dataId uuid.UUID, hash [32]byte, deviceId uuid.UUID) (time.Duration, time.Duration, time.Duration, error) {
+	if configs.Envs.BlockchainMode == types.BCNone || configs.Envs.BlockchainMode == types.BCBatchCheck {
+		return 0, 0, 0, nil
+	}
+
+	start := time.Now()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(configs.Envs.BlockchainContextTimeout)*2*time.Second)
+	defer cancel()
+
+	opt := c.createOpt(ctx)
 
 	sendStart := time.Now()
 	transaction, err := c.dataHashRegistry.StoreHash(&opt, dataId, hash, deviceId)
@@ -181,6 +185,34 @@ func (c *Client) Send(dataId uuid.UUID, hash [32]byte, deviceId uuid.UUID) (time
 	return duration, sendDuration, mineDuration, nil
 }
 
+func (c *Client) StoreRoot(startTimestamp time.Time, root [32]byte) error {
+	if configs.Envs.BlockchainMode != types.BCBatchCheck {
+		return fmt.Errorf("StoreRoot is only available in BCBatchCheck mode")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(configs.Envs.BlockchainContextTimeout)*2*time.Second)
+	defer cancel()
+
+	opt := c.createOpt(ctx)
+
+	transaction, err := c.batchRegistry.StoreRoot(&opt, big.NewInt(startTimestamp.Unix()), root)
+	if err != nil {
+		return fmt.Errorf("transaction store root error: %w", err)
+	}
+
+	receipt, err := bind.WaitMined(ctx, c.ethClient, transaction)
+	if err != nil {
+		return fmt.Errorf("wait mined error: %w", err)
+	}
+	if receipt.Status != 1 {
+		return fmt.Errorf("transaction failed: %s", transaction.Hash().Hex())
+	}
+
+	log.Println("Transaction hash:", transaction.Hash().Hex())
+
+	return nil
+}
+
 func (c *Client) VerifyHash(dataId uuid.UUID, hash [32]byte) (bool, time.Duration, error) {
 	start := time.Now()
 
@@ -193,7 +225,7 @@ func (c *Client) VerifyHash(dataId uuid.UUID, hash [32]byte) (bool, time.Duratio
 	case types.BCLightCheck:
 		success, err = verifyHashLightCheck(c, dataId, hash)
 	default:
-		success, err = verifyHashFullCheck(c, dataId, hash)
+		success, err = verifyHashBatchCheck(c, dataId, hash)
 	}
 
 	duration := time.Since(start)
@@ -230,6 +262,17 @@ func verifyHashLightCheck(c *Client, dataId uuid.UUID, hash [32]byte) (bool, err
 	}
 
 	return false, fmt.Errorf("failed to verify hash (light)")
+}
+
+func verifyHashBatchCheck(c *Client, dataId uuid.UUID, hash [32]byte) (bool, error) {
+	if c.BatchStartTime.IsZero() {
+		return false, fmt.Errorf("batch start time is not set - start the batch worker first")
+	}
+
+	// ctx, cancel := context.WithTimeout(context.Background(), time.Duration(configs.Envs.BlockchainContextTimeout)*time.Second)
+	// defer cancel()
+
+	return true, nil
 }
 
 func (c *Client) VerifyHashes(docs []types.DocData, fromTimestamp time.Time, toTimestamp time.Time) (bool, time.Duration, error) {

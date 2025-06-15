@@ -8,6 +8,7 @@ import (
 	"github.com/mbabinski218/BaaS-IoT-platform/blockchain"
 	"github.com/mbabinski218/BaaS-IoT-platform/database"
 	"github.com/mbabinski218/BaaS-IoT-platform/types"
+	"github.com/mbabinski218/BaaS-IoT-platform/utils"
 )
 
 type BatchWorker struct {
@@ -51,18 +52,35 @@ func (bw *BatchWorker) performBatch() {
 	start := time.Now()
 
 	now := time.Now().Truncate(time.Minute)
-	data, _, err := bw.database.GetFromTo(now, now.Add(time.Duration(bw.Interval)*time.Minute))
+	docs, _, err := bw.database.GetFromTo(now, now.Add(time.Duration(bw.Interval)*time.Minute))
 	if err != nil {
 		log.Println("Failed to get batch data:", err)
 		return
 	}
 
-	if len(data) == 0 {
+	if len(docs) == 0 {
 		log.Println("No data to process in batch")
 		return
 	}
 
+	root, audit, err := utils.CreateMerkleRoot(docs)
+	if err != nil {
+		log.Println("Failed to create Merkle root:", err)
+		return
+	}
+
+	if err := bw.blockchain.StoreRoot(now, root); err != nil {
+		log.Println("Failed to store root in blockchain:", err)
+		return
+	}
+
+	for _, doc := range docs {
+		if err := bw.database.UpdateProof(doc.Id, audit[doc.Id]); err != nil {
+			log.Println("Failed to store Merkle audit info for doc with id:", doc.Id, "err:", err)
+		}
+	}
+
 	duration := time.Since(start)
-	fmt.Printf("-------- Batch completed successfully (for: %v docs)--------\n", len(data))
+	fmt.Printf("-------- Batch completed successfully (for: %v docs)--------\n", len(docs))
 	fmt.Println("Batch duration:", duration)
 }

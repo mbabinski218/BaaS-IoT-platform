@@ -8,9 +8,11 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/cbergoon/merkletree"
 	"github.com/fxamacker/cbor/v2"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
+	"github.com/mbabinski218/BaaS-IoT-platform/types"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -92,4 +94,54 @@ func ToUUID(insertedID interface{}) (uuid.UUID, error) {
 	}
 
 	return uuid.FromBytes(bin.Data)
+}
+
+func BytesTo32(b []byte) ([32]byte, error) {
+	var out [32]byte
+	if len(b) != 32 {
+		return out, fmt.Errorf("invalid Merkle root length: got %d, expected 32", len(b))
+	}
+	copy(out[:], b)
+	return out, nil
+}
+
+func CreateMerkleRoot(data []types.DocData) ([32]byte, map[uuid.UUID][][]byte, error) {
+	var contents []merkletree.Content
+	var hashMap = make(map[string][32]byte)
+	var audit = make(map[uuid.UUID][][]byte)
+
+	for _, doc := range data {
+		hash, err := CalculateHash(doc.Data)
+		if err != nil {
+			return [32]byte{}, nil, fmt.Errorf("failed to calculate hash for document with id: %s, err: %w", doc.Id, err)
+		}
+
+		hashMap[string(doc.Id[:])] = hash
+		contents = append(contents, types.MerkleData{Hash: hash})
+	}
+
+	tree, err := merkletree.NewTree(contents)
+	if err != nil {
+		return [32]byte{}, nil, fmt.Errorf("failed to create Merkle tree: %w", err)
+	}
+
+	rootBytes := tree.MerkleRoot()
+	root, err := BytesTo32(rootBytes)
+	if err != nil {
+		return [32]byte{}, nil, fmt.Errorf("failed to convert Merkle root to 32 bytes: %w", err)
+	}
+
+	for _, doc := range data {
+		hash := hashMap[string(doc.Id[:])]
+		leaf := types.MerkleData{Hash: hash}
+
+		proof, _, err := tree.GetMerklePath(leaf)
+		if err != nil {
+			return root, nil, fmt.Errorf("proof not found for %s: %w", doc.Id, err)
+		}
+
+		audit[doc.Id] = proof
+	}
+
+	return root, audit, nil
 }

@@ -11,10 +11,10 @@ type NewDataPayload struct {
 	Data     map[string]any `json:"data"`
 	Hash     string         `json:"hash"`
 	DataId   uuid.UUID      `json:"data_id"`
-	// Signature string         `json:"signature"`
 }
 
 type DocData struct {
-	Id   uuid.UUID      `json:"_id"`
-	Data map[string]any `json:"data"`
+	Id    uuid.UUID      `json:"_id"`
+	Data  map[string]any `json:"data"`
+	Proof [][]byte       `json:"proof,omitempty"`
 }

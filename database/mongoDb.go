@@ -156,6 +156,7 @@ func (c *Client) GetAuditData(n int64) ([]types.DocData, error) {
 		{{Key: "$project", Value: bson.D{
 			{Key: "_id", Value: 1},
 			{Key: "data", Value: 1},
+			{Key: "proof", Value: 1},
 		}}},
 	}
 
@@ -203,8 +204,9 @@ func (c *Client) GetFromTo(from, to time.Time) ([]types.DocData, time.Duration, 
 			},
 		}}},
 		{{Key: "$project", Value: bson.M{
-			"_id":  1,
-			"data": 1,
+			"_id":   1,
+			"data":  1,
+			"proof": 1,
 		}}},
 	}
 
@@ -235,4 +237,30 @@ func (c *Client) GetFromTo(from, to time.Time) ([]types.DocData, time.Duration, 
 	duration := time.Since(start)
 
 	return results, duration, nil
+}
+
+func (c *Client) UpdateProof(dataId uuid.UUID, proof [][]byte) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(configs.Envs.MongoContextTimeout)*time.Second)
+	defer cancel()
+
+	id := utils.ToBinaryUUID(dataId)
+
+	update := bson.M{
+		"$set": bson.M{"proof": proof},
+	}
+
+	_, err := c.collection.UpdateOne(ctx, bson.M{"_id": id}, update)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return fmt.Errorf("data with id: %s not found", dataId)
+		} else if errors.Is(err, context.DeadlineExceeded) {
+			return fmt.Errorf("update operation timed out for id: %s", dataId)
+		} else if errors.Is(err, context.Canceled) {
+			return fmt.Errorf("update operation canceled for id: %s", dataId)
+		}
+
+		return fmt.Errorf("failed to update proof: %v", err)
+	}
+
+	return nil
 }
