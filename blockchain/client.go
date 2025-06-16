@@ -213,7 +213,7 @@ func (c *Client) StoreRoot(startTimestamp time.Time, root [32]byte) error {
 	return nil
 }
 
-func (c *Client) VerifyHash(dataId uuid.UUID, hash [32]byte) (bool, time.Duration, error) {
+func (c *Client) VerifyHash(dataId uuid.UUID, hash [32]byte, timestamp time.Time, proof [][32]byte) (bool, time.Duration, error) {
 	start := time.Now()
 
 	var success bool = true
@@ -224,8 +224,10 @@ func (c *Client) VerifyHash(dataId uuid.UUID, hash [32]byte) (bool, time.Duratio
 		success, err = verifyHashFullCheck(c, dataId, hash)
 	case types.BCLightCheck:
 		success, err = verifyHashLightCheck(c, dataId, hash)
+	case types.BCBatchCheck:
+		success, err = verifyHashBatchCheck(c, timestamp, hash, proof)
 	default:
-		success, err = verifyHashBatchCheck(c, dataId, hash)
+		return false, 0, fmt.Errorf("unknown blockchain mode")
 	}
 
 	duration := time.Since(start)
@@ -264,15 +266,25 @@ func verifyHashLightCheck(c *Client, dataId uuid.UUID, hash [32]byte) (bool, err
 	return false, fmt.Errorf("failed to verify hash (light)")
 }
 
-func verifyHashBatchCheck(c *Client, dataId uuid.UUID, hash [32]byte) (bool, error) {
-	if c.BatchStartTime.IsZero() {
-		return false, fmt.Errorf("batch start time is not set - start the batch worker first")
+func verifyHashBatchCheck(c *Client, timestamp time.Time, hash [32]byte, proof [][32]byte) (bool, error) {
+	if len(proof) == 0 {
+		return true, nil
 	}
 
-	// ctx, cancel := context.WithTimeout(context.Background(), time.Duration(configs.Envs.BlockchainContextTimeout)*time.Second)
-	// defer cancel()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(configs.Envs.BlockchainContextTimeout)*3*time.Second)
+	defer cancel()
 
-	return true, nil
+	interval := time.Duration(configs.Envs.BlockchainBatchInterval) * time.Minute
+	elapsed := timestamp.Sub(c.BatchStartTime)
+	ticks := int64(elapsed / interval)
+	batchTime := c.BatchStartTime.Add(time.Duration(ticks) * interval)
+
+	success, err := c.batchRegistry.VerifyProof(&bind.CallOpts{Context: ctx}, big.NewInt(batchTime.Unix()), hash, proof)
+	if err != nil {
+		return false, fmt.Errorf("failed to verify hash (batch): %w", err)
+	}
+
+	return success, nil
 }
 
 func (c *Client) VerifyHashes(docs []types.DocData, fromTimestamp time.Time, toTimestamp time.Time) (bool, time.Duration, error) {
@@ -288,6 +300,8 @@ func (c *Client) VerifyHashes(docs []types.DocData, fromTimestamp time.Time, toT
 		success, err = executeBlockchainLightCheck(c, docs)
 	case types.BCBatchCheck:
 		success, err = executeBlockchainBatchCheck(c, docs, fromTimestamp, toTimestamp)
+	default:
+		return false, 0, fmt.Errorf("unknown blockchain mode")
 	}
 
 	duration := time.Since(start)
@@ -305,7 +319,7 @@ func executeBlockchainFullCheck(c *Client, docs []types.DocData) (bool, error) {
 			continue
 		}
 
-		success, _, err := c.VerifyHash(doc.Id, hash)
+		success, _, err := c.VerifyHash(doc.Id, hash, time.Time{}, nil)
 		if err != nil {
 			log.Printf("failed to verify hash for doc with id: %v, hash: %x\n", doc.Id, hash)
 			result = false

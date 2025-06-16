@@ -53,7 +53,7 @@ func (aw *AuditWorker) performAudit() {
 			continue
 		}
 
-		success, _, err := aw.blockchain.VerifyHash(docData.Id, hash)
+		success, _, err := aw.blockchain.VerifyHash(docData.Id, hash, time.Time{}, nil)
 		if err != nil {
 			fmt.Println("Failed to update audit status for data Id", docData.Id, ":", err)
 			continue

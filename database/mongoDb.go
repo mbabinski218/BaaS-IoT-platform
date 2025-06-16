@@ -122,7 +122,7 @@ func (c *Client) Delete(dataId uuid.UUID) error {
 	return nil
 }
 
-func (c *Client) Get(dataId uuid.UUID) (map[string]any, time.Duration, error) {
+func (c *Client) Get(dataId uuid.UUID) (map[string]any, [][32]byte, time.Duration, error) {
 	start := time.Now()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(configs.Envs.MongoContextTimeout)*time.Second)
@@ -131,20 +131,21 @@ func (c *Client) Get(dataId uuid.UUID) (map[string]any, time.Duration, error) {
 	id := utils.ToBinaryUUID(dataId)
 
 	var result struct {
-		Data map[string]any `bson:"data"`
+		Data  map[string]any `bson:"data"`
+		Proof [][32]byte     `bson:"proof"`
 	}
 
 	err := c.collection.FindOne(ctx, bson.M{"_id": id}).Decode(&result)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			return nil, 0, fmt.Errorf("data with ID %s not found", dataId)
+			return nil, nil, 0, fmt.Errorf("data with ID %s not found", dataId)
 		}
-		return nil, 0, fmt.Errorf("failed to get data: %v", err)
+		return nil, nil, 0, fmt.Errorf("failed to get data: %v", err)
 	}
 
 	duration := time.Since(start)
 
-	return result.Data, duration, nil
+	return result.Data, result.Proof, duration, nil
 }
 
 func (c *Client) GetAuditData(n int64) ([]types.DocData, error) {

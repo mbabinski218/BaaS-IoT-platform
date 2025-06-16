@@ -21,9 +21,9 @@ contract BatchRegistry {
             bytes32 proofElement = proof[i];
             
             if (computedHash < proofElement) {
-                computedHash = keccak256(abi.encodePacked(computedHash, proofElement));
+                computedHash = sha256(abi.encodePacked(computedHash, proofElement));
             } else {
-                computedHash = keccak256(abi.encodePacked(proofElement, computedHash));
+                computedHash = sha256(abi.encodePacked(proofElement, computedHash));
             }
         }
 

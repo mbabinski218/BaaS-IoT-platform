@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	blockchain "github.com/mbabinski218/BaaS-IoT-platform/blockchain"
+	"github.com/mbabinski218/BaaS-IoT-platform/configs"
 	"github.com/mbabinski218/BaaS-IoT-platform/database"
 	"github.com/mbabinski218/BaaS-IoT-platform/types"
 	"github.com/mbabinski218/BaaS-IoT-platform/utils"
@@ -95,7 +96,7 @@ func (h *Handler) handleGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	doc, mongoDuration, err := h.database.Get(uuid)
+	doc, proof, mongoDuration, err := h.database.Get(uuid)
 	if err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("failed to get data from database: %v", err))
 		return
@@ -112,7 +113,12 @@ func (h *Handler) handleGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	success, blockchainDuration, err := h.blockchain.VerifyHash(uuid, hash)
+	var timestamp time.Time
+	if proof != nil {
+		timestamp, _ = time.Parse(types.TimeLayout, doc["timestamp"].(string))
+	}
+
+	success, blockchainDuration, err := h.blockchain.VerifyHash(uuid, hash, timestamp, proof)
 	if err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("blockchain error: %v", err))
 		return
@@ -120,6 +126,10 @@ func (h *Handler) handleGet(w http.ResponseWriter, r *http.Request) {
 	if !success {
 		utils.WriteError(w, http.StatusNotFound, fmt.Errorf("blockchain - hash not found or invalid for dataId: %s", dataId))
 		return
+	}
+
+	if configs.Envs.BlockchainMode == types.BCBatchCheck && proof == nil {
+		doc["verified"] = false
 	}
 
 	utils.WriteJSON(w, http.StatusOK, doc)
