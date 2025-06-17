@@ -1,0 +1,133 @@
+{
+    "test/batchRegistry.t.sol:BatchRegistryTest": {
+        "duration": "1ms 63µs 900ns",
+        "test_results": {
+            "testRevertOnDuplicateRoot()": {
+                "status": "Success",
+                "reason": null,
+                "counterexample": null,
+                "logs": [],
+                "decoded_logs": [],
+                "kind": {
+                    "Unit": {
+                        "gas": 33958
+                    }
+                },
+                "traces": [],
+                "labeled_addresses": {},
+                "duration": "436µs 300ns",
+                "breakpoints": {},
+                "gas_snapshots": {}
+            },
+            "testStoreAndVerifyRootCorrect()": {
+                "status": "Success",
+                "reason": null,
+                "counterexample": null,
+                "logs": [],
+                "decoded_logs": [],
+                "kind": {
+                    "Unit": {
+                        "gas": 36185
+                    }
+                },
+                "traces": [],
+                "labeled_addresses": {},
+                "duration": "393µs 700ns",
+                "breakpoints": {},
+                "gas_snapshots": {}
+            },
+            "testStoreAndVerifyRootIncorrectBatchTime()": {
+                "status": "Success",
+                "reason": null,
+                "counterexample": null,
+                "logs": [],
+                "decoded_logs": [],
+                "kind": {
+                    "Unit": {
+                        "gas": 38218
+                    }
+                },
+                "traces": [],
+                "labeled_addresses": {},
+                "duration": "396µs 700ns",
+                "breakpoints": {},
+                "gas_snapshots": {}
+            },
+            "testStoreAndVerifyRootIncorrectRoot()": {
+                "status": "Success",
+                "reason": null,
+                "counterexample": null,
+                "logs": [],
+                "decoded_logs": [],
+                "kind": {
+                    "Unit": {
+                        "gas": 36920
+                    }
+                },
+                "traces": [],
+                "labeled_addresses": {},
+                "duration": "388µs 900ns",
+                "breakpoints": {},
+                "gas_snapshots": {}
+            }
+        },
+        "warnings": []
+    },
+    "test/dataHashRegistry.t.sol:DataHashRegistryTest": {
+        "duration": "1ms 68µs 500ns",
+        "test_results": {
+            "testRevertOnDuplicateStore()": {
+                "status": "Success",
+                "reason": null,
+                "counterexample": null,
+                "logs": [],
+                "decoded_logs": [],
+                "kind": {
+                    "Unit": {
+                        "gas": 102758
+                    }
+                },
+                "traces": [],
+                "labeled_addresses": {},
+                "duration": "438µs 700ns",
+                "breakpoints": {},
+                "gas_snapshots": {}
+            },
+            "testStoreAndVerifyHashCorrect()": {
+                "status": "Success",
+                "reason": null,
+                "counterexample": null,
+                "logs": [],
+                "decoded_logs": [],
+                "kind": {
+                    "Unit": {
+                        "gas": 107451
+                    }
+                },
+                "traces": [],
+                "labeled_addresses": {},
+                "duration": "421µs 800ns",
+                "breakpoints": {},
+                "gas_snapshots": {}
+            },
+            "testStoreAndVerifyHashIncorrect()": {
+                "status": "Success",
+                "reason": null,
+                "counterexample": null,
+                "logs": [],
+                "decoded_logs": [],
+                "kind": {
+                    "Unit": {
+                        "gas": 108208
+                    }
+                },
+                "traces": [],
+                "labeled_addresses": {},
+                "duration": "402µs 900ns",
+                "breakpoints": {},
+                "gas_snapshots": {}
+            }
+        },
+        "warnings": []
+    }
+}
