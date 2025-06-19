@@ -8,7 +8,7 @@ import (
 	"github.com/mbabinski218/BaaS-IoT-platform/configs"
 	"github.com/mbabinski218/BaaS-IoT-platform/database"
 	"github.com/mbabinski218/BaaS-IoT-platform/types"
-	"github.com/mbabinski218/BaaS-IoT-platform/worker"
+	"github.com/mbabinski218/BaaS-IoT-platform/workers"
 )
 
 func main() {
@@ -25,18 +25,18 @@ func main() {
 	}
 
 	// Workers initialization
-	workers := []worker.Worker{}
+	backgroundWorkers := []workers.Worker{}
 
 	if configs.Envs.AuditEnabled {
-		workers = append(workers, worker.NewAuditWorker(configs.Envs.AuditTimeout, configs.Envs.AuditSize, databaseClient, ethClient))
+		backgroundWorkers = append(backgroundWorkers, workers.NewAuditWorker(configs.Envs.AuditTimeout, configs.Envs.AuditSize, databaseClient, ethClient))
 	}
 
 	if configs.Envs.BlockchainMode == types.BCBatchCheck {
-		workers = append(workers, worker.NewBatchWorker(configs.Envs.BlockchainBatchInterval, databaseClient, ethClient))
+		backgroundWorkers = append(backgroundWorkers, workers.NewBatchWorker(configs.Envs.BlockchainBatchInterval, databaseClient, ethClient))
 	}
 
-	for _, w := range workers {
-		go w.Start()
+	for _, worker := range backgroundWorkers {
+		go worker.Start()
 	}
 
 	// Start the API server
