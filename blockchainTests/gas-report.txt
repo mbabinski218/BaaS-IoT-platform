@@ -1,17 +1,19 @@
 No files changed, compilation skipped
 
+Ran 6 tests for test/batchRegistry.t.sol:BatchRegistryTest
+[PASS] testRevertOnDuplicateRoot() (gas: 126040)
+[PASS] testStoreAndVerifyRootCorrect() (gas: 117263)
+[PASS] testStoreAndVerifyRootIncorrectBatchTime() (gas: 115174)
+[PASS] testStoreAndVerifyRootIncorrectRoot() (gas: 119898)
+[PASS] testVerifyProofFail() (gas: 271456)
+[PASS] testVerifyProofSuccess() (gas: 265967)
+Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 960.10µs (1.91ms CPU time)
+
 Ran 3 tests for test/dataHashRegistry.t.sol:DataHashRegistryTest
 [PASS] testRevertOnDuplicateStore() (gas: 149190)
 [PASS] testStoreAndVerifyHashCorrect() (gas: 144143)
 [PASS] testStoreAndVerifyHashIncorrect() (gas: 144900)
-Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 1.13ms (1.31ms CPU time)
-
-Ran 4 tests for test/batchRegistry.t.sol:BatchRegistryTest
-[PASS] testRevertOnDuplicateRoot() (gas: 79414)
-[PASS] testStoreAndVerifyRootCorrect() (gas: 66437)
-[PASS] testStoreAndVerifyRootIncorrectBatchTime() (gas: 66470)
-[PASS] testStoreAndVerifyRootIncorrectRoot() (gas: 67172)
-Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 1.44ms (2.13ms CPU time)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 1.12ms (1.34ms CPU time)
 
 ╭-----------------------------------------------------------------------+-----------------+-------+--------+-------+---------╮
 | ../blockchain/smartContracts/BatchRegistry.sol:BatchRegistry Contract |                 |       |        |       |         |
@@ -26,7 +28,9 @@ Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 1.44ms (2.13ms CPU 
 |-----------------------------------------------------------------------+-----------------+-------+--------+-------+---------|
 | roots                                                                 | 2775            | 2775  | 2775   | 2775  | 3       |
 |-----------------------------------------------------------------------+-----------------+-------+--------+-------+---------|
-| storeRoot                                                             | 24777           | 40624 | 44592  | 44592 | 5       |
+| storeRoot                                                             | 24777           | 41747 | 44568  | 44592 | 7       |
+|-----------------------------------------------------------------------+-----------------+-------+--------+-------+---------|
+| verifyProof                                                           | 6068            | 6073  | 6073   | 6078  | 2       |
 |-----------------------------------------------------------------------+-----------------+-------+--------+-------+---------|
 | verifyRoot                                                            | 2950            | 2950  | 2950   | 2950  | 3       |
 ╰-----------------------------------------------------------------------+-----------------+-------+--------+-------+---------╯
@@ -50,4 +54,4 @@ Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 1.44ms (2.13ms CPU 
 ╰-----------------------------------------------------------------------------+-----------------+-------+--------+--------+---------╯
 
 
-Ran 2 test suites in 8.78ms (2.57ms CPU time): 7 tests passed, 0 failed, 0 skipped (7 total tests)
+Ran 2 test suites in 5.82ms (2.08ms CPU time): 9 tests passed, 0 failed, 0 skipped (9 total tests)
