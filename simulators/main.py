@@ -14,7 +14,12 @@ DEVICE_GENERATORS = {
     "weather": generate_weather_data
 }
 
-def send_data_loop(device_index, device_type, frequency, backend_url, sin_mode=False):
+lock = threading.Lock()
+counter = 0
+
+def send_data_loop(device_index, number_to_add, device_type, frequency, backend_url, sin_mode=False):
+    global counter, lock
+
     # Choose the generator function based on device type
     generator = DEVICE_GENERATORS[device_type]
     if generator is None:
@@ -25,7 +30,10 @@ def send_data_loop(device_index, device_type, frequency, backend_url, sin_mode=F
     device_id = uuid.uuid4().__str__()
 
     # Start sending data
-    while True:
+    while number_to_add == 0 or counter < number_to_add:
+        with lock:
+            counter += 1
+
         # Generate data
         data_id = uuid.uuid4().__str__()
         payload = generator()
@@ -76,6 +84,7 @@ if __name__ == '__main__':
     # Parse command line arguments
     parser = argparse.ArgumentParser()
     parser.add_argument("--type", required=True, choices=["parking", "weather", "weather2"], help="Device type")
+    parser.add_argument("--number", type=int, default=0, help="Number of records to add - 0 means infinity")
     parser.add_argument("--count", type=int, default=1, help="Number of device copies")
     parser.add_argument("--freq", type=float, default=30.0, help="Frequency of sending data")
     parser.add_argument("--sin", action='store_true', help="Use sinusoidal frequency")
@@ -84,6 +93,6 @@ if __name__ == '__main__':
 
     # Create threads for each device
     for i in range(args.count):
-        t = threading.Thread(target=send_data_loop, args=(i + 1, args.type, args.freq, args.url, args.sin))
+        t = threading.Thread(target=send_data_loop, args=(i + 1, args.number, args.type, args.freq, args.url, args.sin))
         t.start()
         time.sleep(args.freq / args.count)
