@@ -31,6 +31,7 @@ func (h *Handler) DataRoutes(router *mux.Router) {
 	router.HandleFunc("/send", h.handleSend).Methods("POST")
 	router.HandleFunc("/get/{dataId}", h.handleGet).Methods("GET")
 	router.HandleFunc("/get", h.handleGetFromTo).Methods("GET")
+	router.HandleFunc("/blocknumber", h.handleGetBlockNumber).Methods("GET")
 }
 
 func (h *Handler) handleSend(w http.ResponseWriter, r *http.Request) {
@@ -200,4 +201,13 @@ func (h *Handler) handleGetFromTo(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("MongoDB duration:", mongoDuration)
 	fmt.Println("Blockchain duration:", blockchainDuration)
 	fmt.Println("Total duration:", duration)
+}
+
+func (h *Handler) handleGetBlockNumber(w http.ResponseWriter, r *http.Request) {
+	blockNumber, err := h.blockchain.GetBlockNumber()
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("blockchain error: %v", err))
+	} else {
+		utils.WriteJSON(w, http.StatusOK, blockNumber)
+	}
 }

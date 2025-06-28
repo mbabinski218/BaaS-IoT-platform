@@ -459,3 +459,14 @@ func verifyTimestamps(batchStartTime, from, to time.Time) error {
 
 	return nil
 }
+
+func (c *Client) GetBlockNumber() (uint64, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(configs.Envs.BlockchainContextTimeout)*time.Second)
+	defer cancel()
+
+	blockNumber, err := c.ethClient.BlockNumber(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get block number: %w", err)
+	}
+	return blockNumber, nil
+}
