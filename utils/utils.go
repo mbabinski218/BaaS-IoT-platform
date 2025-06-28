@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/cbergoon/merkletree"
 	"github.com/fxamacker/cbor/v2"
@@ -144,4 +145,17 @@ func CreateMerkleRoot(data []types.DocData) ([32]byte, map[uuid.UUID][][]byte, e
 	}
 
 	return root, audit, nil
+}
+
+func FixTimestamps(from, to time.Time, interval time.Duration) (time.Time, time.Time, error) {
+	startTime, _ := time.ParseInLocation(types.TimeLayout, types.BlockchainBatchStartTime, time.UTC)
+	interval = time.Duration(interval) * time.Minute
+
+	fromOffset := from.Sub(startTime)
+	toOffset := to.Sub(startTime)
+
+	fromRounded := startTime.Add((fromOffset / interval) * interval)
+	toRounded := startTime.Add(((toOffset + interval - 1) / interval) * interval)
+
+	return fromRounded, toRounded, nil
 }
