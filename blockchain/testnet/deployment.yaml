@@ -1,0 +1,6 @@
+cl: lighthouse
+el: geth
+mev: none
+nodes: 1
+total_nodes: 1
+validators_per_node: 4

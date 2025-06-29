@@ -1,0 +1,11 @@
+consensus_clients:
+- lighthouse
+execution_clients:
+- geth
+mev_type: none
+network_params:
+  altair_fork_epoch: 0
+  deneb_fork_epoch: 0
+  merge_fork_epoch: 0
+  seconds_per_slot: 2
+  slots_per_epoch: 8
