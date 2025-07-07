@@ -35,6 +35,10 @@ func main() {
 		backgroundWorkers = append(backgroundWorkers, workers.NewBatchWorker(configs.Envs.BlockchainBatchInterval, databaseClient, ethClient))
 	}
 
+	if len(configs.Envs.BlockchainCheckpoints) > 0 {
+		backgroundWorkers = append(backgroundWorkers, workers.NewCheckpointWorker(databaseClient, ethClient))
+	}
+
 	for _, worker := range backgroundWorkers {
 		go worker.Start()
 	}

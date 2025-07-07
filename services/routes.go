@@ -133,13 +133,18 @@ func (h *Handler) handleGet(w http.ResponseWriter, r *http.Request) {
 		doc["verified"] = false
 	}
 
-	utils.WriteJSON(w, http.StatusOK, doc)
-
 	duration := time.Since(start)
 	fmt.Println("-------- Data retrieved successfully --------")
 	fmt.Println("MongoDB duration:", mongoDuration)
 	fmt.Println("Blockchain duration:", blockchainDuration)
 	fmt.Println("Total duration:", duration)
+
+	result := make(map[string]any)
+	result["data"] = doc
+	result["mongoDuration"] = mongoDuration.String()
+	result["blockchainDuration"] = blockchainDuration.String()
+	result["duration"] = duration.String()
+	utils.WriteJSON(w, http.StatusOK, result)
 }
 
 func (h *Handler) handleGetFromTo(w http.ResponseWriter, r *http.Request) {
@@ -223,13 +228,19 @@ func (h *Handler) handleGetFromTo(w http.ResponseWriter, r *http.Request) {
 		fixedDocs = append(fixedDocs, doc)
 	}
 
-	utils.WriteJSON(w, http.StatusOK, fixedDocs)
-
 	duration := time.Since(start)
 	fmt.Println("-------- Data retrieved successfully --------")
 	fmt.Println("MongoDB duration:", mongoDuration)
 	fmt.Println("Blockchain duration:", blockchainDuration)
 	fmt.Println("Total duration:", duration)
+
+	result := make(map[string]any)
+	result["data"] = fixedDocs
+	result["mongoDuration"] = mongoDuration.String()
+	result["blockchainDuration"] = blockchainDuration.String()
+	result["duration"] = duration.String()
+	result["missed"] = len(docs) - len(fixedDocs)
+	utils.WriteJSON(w, http.StatusOK, result)
 }
 
 func (h *Handler) handleGetBlockNumber(w http.ResponseWriter, r *http.Request) {

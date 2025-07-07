@@ -3,6 +3,7 @@ package configs
 import (
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/joho/godotenv"
 	"github.com/mbabinski218/BaaS-IoT-platform/types"
@@ -24,6 +25,9 @@ type Config struct {
 	BlockchainGasFeeCap            int64
 	BlockchainBatchInterval        int64
 	BlockchainBatchContractAddress string
+	BlockchainSecondsPerBlock      int64
+	BlockchainCheckpoints          []uint64
+	BlockchainValidators           string
 	AuditEnabled                   bool
 	AuditTimeout                   int64
 	AuditSize                      int64
@@ -50,6 +54,9 @@ func initConfig() Config {
 		BlockchainGasFeeCap:            getEnvAsInt("BLOCKCHAIN_GAS_FEE_CAP", 0),      // Default 0 means it will be set by the network
 		BlockchainBatchInterval:        getEnvAsInt("BLOCKCHAIN_BATCH_INTERVAL", 15),  // Default is 15 minutes
 		BlockchainBatchContractAddress: getEnv("BLOCKCHAIN_BATCH_CONTRACT_ADDRESS", ""),
+		BlockchainSecondsPerBlock:      getEnvAsInt("BLOCKCHAIN_SECONDS_PER_BLOCK", 15), // Default is 15 seconds
+		BlockchainCheckpoints:          getEnvAsUintArray("BLOCKCHAIN_CHECKPOINTS", []uint64{}),
+		BlockchainValidators:           getEnv("BLOCKCHAIN_VALIDATORS", ""),
 		AuditEnabled:                   getEnvAsBool("AUDIT_ENABLED", false),
 		AuditTimeout:                   getEnvAsInt("AUDIT_TIMEOUT", 3600000), // Default is 1 hour in milliseconds
 		AuditSize:                      getEnvAsInt("AUDIT_SIZE", 1000),
@@ -107,4 +114,29 @@ func getEnvAsBCMode(key string, fallback types.BlockchainMode) types.BlockchainM
 	}
 
 	return fallback
+}
+
+func getEnvAsUintArray(key string, fallback []uint64) []uint64 {
+	if value, ok := os.LookupEnv(key); ok {
+		var result []uint64
+		for _, v := range splitAndTrim(value, ",") {
+			if i, err := strconv.ParseUint(v, 10, 64); err == nil {
+				result = append(result, i)
+			}
+		}
+		return result
+	}
+
+	return fallback
+}
+
+func splitAndTrim(s, sep string) []string {
+	var result []string
+	for _, part := range strings.Split(s, sep) {
+		trimmed := strings.TrimSpace(part)
+		if trimmed != "" {
+			result = append(result, trimmed)
+		}
+	}
+	return result
 }

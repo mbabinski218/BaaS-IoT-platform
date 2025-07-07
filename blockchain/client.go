@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"math/big"
+	"os/exec"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -469,4 +470,23 @@ func (c *Client) GetBlockNumber() (uint64, error) {
 		return 0, fmt.Errorf("failed to get block number: %w", err)
 	}
 	return blockNumber, nil
+}
+
+func (c *Client) StopMining() error {
+	cmd := exec.Command("docker", "pause", configs.Envs.BlockchainValidators)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to stop container: %v\nOutput: %s", err, output)
+	}
+	return nil
+}
+
+func (c *Client) StartMining() error {
+	cmd := exec.Command("docker", "unpause", configs.Envs.BlockchainValidators)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to start container: %v\nOutput: %s", err, output)
+	}
+
+	return nil
 }
