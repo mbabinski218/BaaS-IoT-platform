@@ -395,7 +395,7 @@ func executeBlockchainBatchCheck(c *Client, docs []types.DocData, from, to time.
 		return false, fmt.Errorf("invalid batch timestamps: %w", err)
 	}
 
-	interval := time.Duration(configs.Envs.BlockchainBatchInterval) * time.Minute
+	interval := time.Duration(configs.Envs.BlockchainBatchInterval) * time.Second
 	slots := make(map[time.Time][]types.DocData)
 
 	for _, doc := range docs {
@@ -453,7 +453,7 @@ func verifyTimestamps(batchStartTime, from, to time.Time) error {
 	fromDiff := from.Sub(batchStartTime)
 	toDiff := to.Sub(batchStartTime)
 
-	interval := time.Duration(configs.Envs.BlockchainBatchInterval) * time.Minute
+	interval := time.Duration(configs.Envs.BlockchainBatchInterval) * time.Second
 	if fromDiff%interval != 0 || toDiff%interval != 0 {
 		return fmt.Errorf("timestamps must be aligned with the batch interval: %v and start time: %v", interval, batchStartTime)
 	}

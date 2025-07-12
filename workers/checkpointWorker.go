@@ -1,7 +1,6 @@
 package workers
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -12,6 +11,7 @@ import (
 	"github.com/mbabinski218/BaaS-IoT-platform/blockchain"
 	"github.com/mbabinski218/BaaS-IoT-platform/configs"
 	"github.com/mbabinski218/BaaS-IoT-platform/database"
+	"github.com/mbabinski218/BaaS-IoT-platform/types"
 	"github.com/xuri/excelize/v2"
 )
 
@@ -19,12 +19,14 @@ type CheckpointWorker struct {
 	Interval   uint64
 	database   *database.Client
 	blockchain *blockchain.Client
+	startTime  *time.Time
 }
 
-func NewCheckpointWorker(db *database.Client, bc *blockchain.Client) *CheckpointWorker {
+func NewCheckpointWorker(db *database.Client, bc *blockchain.Client, st *time.Time) *CheckpointWorker {
 	return &CheckpointWorker{
 		database:   db,
 		blockchain: bc,
+		startTime:  st,
 	}
 }
 
@@ -37,11 +39,11 @@ func (cw *CheckpointWorker) Start() {
 	log.Println("Checkpoint worker started with interval:", interval, "seconds")
 
 	for range ticker.C {
-		cw.performBatch()
+		cw.performTest()
 	}
 }
 
-func (cw *CheckpointWorker) performBatch() {
+func (cw *CheckpointWorker) performTest() {
 	start := time.Now()
 
 	blockNumber, err := cw.blockchain.GetBlockNumber()
@@ -59,7 +61,7 @@ func (cw *CheckpointWorker) performBatch() {
 		return
 	}
 
-	err = cw.test()
+	err = cw.test(blockNumber)
 	if err != nil {
 		log.Println("Test failed:", err)
 		return
@@ -74,37 +76,30 @@ func (cw *CheckpointWorker) performBatch() {
 	fmt.Println("Checkpoint duration:", duration)
 }
 
-func (cw *CheckpointWorker) test() error {
+func (cw *CheckpointWorker) test(blockNumber uint64) error {
+	const numberOfRepeats = 10
 	apiURL := "http://" + configs.Envs.PublicHost + "/api/v1/get"
-
-	resp, err := http.Get(apiURL)
-	if err != nil {
-		return fmt.Errorf("API request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	// Optionally, parse the response if needed
-	var result map[string]any
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return fmt.Errorf("failed to decode API response: %w", err)
-	}
 
 	// Create or open Excel file
 	date := time.Now()
-	fileName := date.Format("2006-01-02") + "_checkpoint_results.xlsx"
+	fileName := date.Format(types.ShortTimeLayout) + "_checkpoint_results.xlsx"
 	var f *excelize.File
 	if _, err := os.Stat(fileName); os.IsNotExist(err) {
 		f = excelize.NewFile()
 		f.SetSheetName("Sheet1", "Results")
-		// Write header
 		f.SetCellValue("Results", "A1", "Timestamp")
-		f.SetCellValue("Results", "B1", "Duration(ms)")
-		f.SetCellValue("Results", "C1", "StatusCode")
+		f.SetCellValue("Results", "B1", "Blocks")
+		f.SetCellValue("Results", "C1", "First - Db duration")
+		f.SetCellValue("Results", "D1", "First - Blockchain duration")
+		f.SetCellValue("Results", "E1", "First - Total duration")
+		f.SetCellValue("Results", "F1", "Center - Db duration")
+		f.SetCellValue("Results", "G1", "Center - Blockchain duration")
+		f.SetCellValue("Results", "H1", "Center - Total duration")
+		f.SetCellValue("Results", "I1", "Last - Db duration")
+		f.SetCellValue("Results", "J1", "Last - Blockchain duration")
+		f.SetCellValue("Results", "K1", "Last - Total duration")
 	} else {
-		f, err = excelize.OpenFile(fileName)
-		if err != nil {
-			return fmt.Errorf("failed to open Excel file: %w", err)
-		}
+		return fmt.Errorf("file %s already exists", fileName)
 	}
 
 	// Find next empty row
@@ -114,9 +109,20 @@ func (cw *CheckpointWorker) test() error {
 	}
 	rowNum := len(rows) + 1
 
-	// Write data
-	f.SetCellValue("Results", fmt.Sprintf("A%d", rowNum), time.Now().Format(time.RFC3339))
-	f.SetCellValue("Results", fmt.Sprintf("C%d", rowNum), resp.StatusCode)
+	for range numberOfRepeats {
+		// Api call for first, center, and last blocks
+
+		// Write data
+		f.SetCellValue("Results", fmt.Sprintf("A%d", rowNum), time.Now().Format(types.TimeLayout))
+		f.SetCellValue("Results", fmt.Sprintf("B%d", rowNum), blockNumber)
+	}
+
+	// Api request
+	resp, err := http.Get(apiURL)
+	if err != nil {
+		return fmt.Errorf("API request failed: %w", err)
+	}
+	defer resp.Body.Close()
 
 	// Save file
 	if err := f.SaveAs(fileName); err != nil {

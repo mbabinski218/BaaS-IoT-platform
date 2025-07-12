@@ -52,7 +52,7 @@ func initConfig() Config {
 		BlockchainGasLimit:             getEnvAsInt("BLOCKCHAIN_GAS_LIMIT", 0),        // Default 0 means it will be set by the network
 		BlockchainGasTipCap:            getEnvAsInt("BLOCKCHAIN_GAS_TIP_CAP", 0),      // Default 0 means it will be set by the network
 		BlockchainGasFeeCap:            getEnvAsInt("BLOCKCHAIN_GAS_FEE_CAP", 0),      // Default 0 means it will be set by the network
-		BlockchainBatchInterval:        getEnvAsInt("BLOCKCHAIN_BATCH_INTERVAL", 15),  // Default is 15 minutes
+		BlockchainBatchInterval:        getEnvAsInt("BLOCKCHAIN_BATCH_INTERVAL", 15),  // Default is 15 seconds
 		BlockchainBatchContractAddress: getEnv("BLOCKCHAIN_BATCH_CONTRACT_ADDRESS", ""),
 		BlockchainSecondsPerBlock:      getEnvAsInt("BLOCKCHAIN_SECONDS_PER_BLOCK", 15), // Default is 15 seconds
 		BlockchainCheckpoints:          getEnvAsUintArray("BLOCKCHAIN_CHECKPOINTS", []uint64{}),

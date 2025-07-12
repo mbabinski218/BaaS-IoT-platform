@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"time"
 
 	"github.com/mbabinski218/BaaS-IoT-platform/api"
 	"github.com/mbabinski218/BaaS-IoT-platform/blockchain"
@@ -25,6 +26,7 @@ func main() {
 	}
 
 	// Workers initialization
+	startTime := time.Now()
 	backgroundWorkers := []workers.Worker{}
 
 	if configs.Envs.AuditEnabled {
@@ -32,11 +34,11 @@ func main() {
 	}
 
 	if configs.Envs.BlockchainMode == types.BCBatchCheck {
-		backgroundWorkers = append(backgroundWorkers, workers.NewBatchWorker(configs.Envs.BlockchainBatchInterval, databaseClient, ethClient))
+		backgroundWorkers = append(backgroundWorkers, workers.NewBatchWorker(configs.Envs.BlockchainBatchInterval, databaseClient, ethClient, &startTime))
 	}
 
 	if len(configs.Envs.BlockchainCheckpoints) > 0 {
-		backgroundWorkers = append(backgroundWorkers, workers.NewCheckpointWorker(databaseClient, ethClient))
+		backgroundWorkers = append(backgroundWorkers, workers.NewCheckpointWorker(databaseClient, ethClient, &startTime))
 	}
 
 	for _, worker := range backgroundWorkers {

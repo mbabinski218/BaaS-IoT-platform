@@ -15,13 +15,15 @@ type BatchWorker struct {
 	Interval   int64
 	database   *database.Client
 	blockchain *blockchain.Client
+	startTime  *time.Time
 }
 
-func NewBatchWorker(interval int64, db *database.Client, bc *blockchain.Client) *BatchWorker {
+func NewBatchWorker(interval int64, db *database.Client, bc *blockchain.Client, st *time.Time) *BatchWorker {
 	return &BatchWorker{
 		Interval:   interval,
 		database:   db,
 		blockchain: bc,
+		startTime:  st,
 	}
 }
 
@@ -29,19 +31,20 @@ func (bw *BatchWorker) Start() {
 	startTime, _ := time.ParseInLocation(types.TimeLayout, types.BlockchainBatchStartTime, time.UTC)
 	elapsed := time.Since(startTime)
 
-	interval := time.Duration(bw.Interval) * time.Minute
+	interval := time.Duration(bw.Interval) * time.Second
 
 	ticks := elapsed / interval
 	nextTick := startTime.Add((ticks + 1) * interval)
 
 	time.Sleep(time.Until(nextTick))
+	bw.startTime = &nextTick
 
-	ticker := time.NewTicker(time.Duration(bw.Interval) * time.Minute)
+	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
 	bw.blockchain.BatchStartTime = startTime
 
-	log.Println("Batch worker started at:", startTime, "with interval:", bw.Interval, "minutes")
+	log.Println("Batch worker started at:", startTime, "with interval:", bw.Interval, "seconds")
 
 	for range ticker.C {
 		bw.performBatch()
@@ -51,8 +54,8 @@ func (bw *BatchWorker) Start() {
 func (bw *BatchWorker) performBatch() {
 	start := time.Now()
 
-	now := time.Now().UTC().Add(2 * time.Hour).Truncate(time.Minute)
-	lastTick := now.Add(-time.Duration(bw.Interval) * time.Minute)
+	now := time.Now().UTC().Add(2 * time.Hour).Truncate(time.Second)
+	lastTick := now.Add(-time.Duration(bw.Interval) * time.Second)
 	docs, _, err := bw.database.GetFromTo(lastTick, now)
 	if err != nil {
 		log.Println("Failed to get batch data:", err)
