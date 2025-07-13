@@ -265,3 +265,67 @@ func (c *Client) UpdateProof(dataId uuid.UUID, proof [][]byte) error {
 
 	return nil
 }
+
+func (c *Client) GetFirstDocumentId() (uuid.UUID, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(configs.Envs.MongoContextTimeout)*time.Second)
+	defer cancel()
+
+	opts := options.FindOne().SetSort(bson.D{{Key: "_id", Value: 1}})
+
+	var result map[string]any
+	err := c.collection.FindOne(ctx, bson.M{}, opts).Decode(&result)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return uuid.Nil, fmt.Errorf("no documents found")
+		}
+		return uuid.Nil, fmt.Errorf("failed to get first document: %v", err)
+	}
+
+	return result["_id"].(uuid.UUID), nil
+}
+
+func (c *Client) GetCenterDocumentId() (uuid.UUID, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(configs.Envs.MongoContextTimeout)*time.Second)
+	defer cancel()
+
+	count, err := c.collection.CountDocuments(ctx, bson.M{})
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("failed to count documents: %v", err)
+	}
+
+	if count == 0 {
+		return uuid.Nil, fmt.Errorf("no documents found")
+	}
+
+	skip := count / 2
+	opts := options.FindOne().SetSkip(skip)
+
+	var result map[string]any
+	err = c.collection.FindOne(ctx, bson.M{}, opts).Decode(&result)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return uuid.Nil, fmt.Errorf("no documents found at center")
+		}
+		return uuid.Nil, fmt.Errorf("failed to get center document: %v", err)
+	}
+
+	return result["_id"].(uuid.UUID), nil
+}
+
+func (c *Client) GetLastDocumentId() (uuid.UUID, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(configs.Envs.MongoContextTimeout)*time.Second)
+	defer cancel()
+
+	opts := options.FindOne().SetSort(bson.D{{Key: "_id", Value: -1}})
+
+	var result map[string]any
+	err := c.collection.FindOne(ctx, bson.M{}, opts).Decode(&result)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return uuid.Nil, fmt.Errorf("no documents found")
+		}
+		return uuid.Nil, fmt.Errorf("failed to get last document: %v", err)
+	}
+
+	return result["_id"].(uuid.UUID), nil
+}

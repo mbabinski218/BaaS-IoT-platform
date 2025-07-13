@@ -473,19 +473,19 @@ func (c *Client) GetBlockNumber() (uint64, error) {
 }
 
 func (c *Client) StopMining() error {
-	cmd := exec.Command("docker", "pause", configs.Envs.BlockchainValidators)
+	cmd := exec.Command("ssh", configs.Envs.BlockchainServerIP, "docker", "pause", configs.Envs.BlockchainValidators)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("failed to stop container: %v\nOutput: %s", err, output)
+		return fmt.Errorf("failed to stop container: %v - output: %s", err, output)
 	}
 	return nil
 }
 
 func (c *Client) StartMining() error {
-	cmd := exec.Command("docker", "unpause", configs.Envs.BlockchainValidators)
+	cmd := exec.Command("ssh", configs.Envs.BlockchainServerIP, "docker", "unpause", configs.Envs.BlockchainValidators)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("failed to start container: %v\nOutput: %s", err, output)
+		return fmt.Errorf("failed to start container: %v - output: %s", err, output)
 	}
 
 	return nil

@@ -236,10 +236,10 @@ func (h *Handler) handleGetFromTo(w http.ResponseWriter, r *http.Request) {
 
 	result := make(map[string]any)
 	result["data"] = fixedDocs
-	result["mongoDuration"] = mongoDuration.String()
-	result["blockchainDuration"] = blockchainDuration.String()
-	result["duration"] = duration.String()
-	result["missed"] = len(docs) - len(fixedDocs)
+	result[types.MongoDuration] = mongoDuration.String()
+	result[types.BlockchainDuration] = blockchainDuration.String()
+	result[types.TotalDuration] = duration.String()
+	result[types.Missed] = len(docs) - len(fixedDocs)
 	utils.WriteJSON(w, http.StatusOK, result)
 }
 

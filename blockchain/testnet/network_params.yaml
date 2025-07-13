@@ -4,6 +4,6 @@ participants:
     count: 3
 network_params:
   network_id: "585858"
-  seconds_per_slot: 1
+  seconds_per_slot: 15
 additional_services:
   - dora
