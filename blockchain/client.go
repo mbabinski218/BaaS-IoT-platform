@@ -275,7 +275,7 @@ func verifyHashBatchCheck(c *Client, timestamp time.Time, hash [32]byte, proof [
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(configs.Envs.BlockchainContextTimeout)*3*time.Second)
 	defer cancel()
 
-	interval := time.Duration(configs.Envs.BlockchainBatchInterval) * time.Minute
+	interval := time.Duration(configs.Envs.BlockchainBatchInterval) * time.Second
 	elapsed := timestamp.Sub(c.BatchStartTime)
 	ticks := int64(elapsed / interval)
 	batchTime := c.BatchStartTime.Add(time.Duration(ticks) * interval)
@@ -473,7 +473,7 @@ func (c *Client) GetBlockNumber() (uint64, error) {
 }
 
 func (c *Client) StopMining() error {
-	cmd := exec.Command("ssh", configs.Envs.BlockchainServerIP, "docker", "pause", configs.Envs.BlockchainValidators)
+	cmd := exec.Command("ssh", "-p "+configs.Envs.BlockchainServerPort, configs.Envs.BlockchainServerIP, "docker", "pause", configs.Envs.BlockchainValidators)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to stop container: %v - output: %s", err, output)
@@ -482,7 +482,7 @@ func (c *Client) StopMining() error {
 }
 
 func (c *Client) StartMining() error {
-	cmd := exec.Command("ssh", configs.Envs.BlockchainServerIP, "docker", "unpause", configs.Envs.BlockchainValidators)
+	cmd := exec.Command("ssh", "-p "+configs.Envs.BlockchainServerPort, configs.Envs.BlockchainServerIP, "docker", "unpause", configs.Envs.BlockchainValidators)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to start container: %v - output: %s", err, output)

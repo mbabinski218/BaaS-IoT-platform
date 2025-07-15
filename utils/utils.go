@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -9,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cbergoon/merkletree"
 	"github.com/fxamacker/cbor/v2"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
@@ -20,12 +20,20 @@ import (
 var Validate = validator.New()
 
 func WriteJSON(w http.ResponseWriter, status int, v any) error {
-	w.Header().Add("Content-Type", "application/json")
-	w.WriteHeader(status)
+	if w == nil {
+		return nil
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if status != http.StatusOK {
+		w.WriteHeader(status)
+	}
 	return json.NewEncoder(w).Encode(v)
 }
 
 func WriteError(w http.ResponseWriter, status int, err error) {
+	if w == nil {
+		return
+	}
 	WriteJSON(w, status, map[string]string{"error": err.Error()})
 }
 
@@ -106,47 +114,6 @@ func BytesTo32(b []byte) ([32]byte, error) {
 	return out, nil
 }
 
-func CreateMerkleRoot(data []types.DocData) ([32]byte, map[uuid.UUID][][]byte, error) {
-	var contents []merkletree.Content
-	var hashMap = make(map[string][32]byte)
-	var audit = make(map[uuid.UUID][][]byte)
-
-	for _, doc := range data {
-		hash, err := CalculateHash(doc.Data)
-		if err != nil {
-			return [32]byte{}, nil, fmt.Errorf("failed to calculate hash for document with id: %s, err: %w", doc.Id, err)
-		}
-
-		hashMap[string(doc.Id[:])] = hash
-		contents = append(contents, types.MerkleData{Hash: hash})
-	}
-
-	tree, err := merkletree.NewTree(contents)
-	if err != nil {
-		return [32]byte{}, nil, fmt.Errorf("failed to create Merkle tree: %w", err)
-	}
-
-	rootBytes := tree.MerkleRoot()
-	root, err := BytesTo32(rootBytes)
-	if err != nil {
-		return [32]byte{}, nil, fmt.Errorf("failed to convert Merkle root to 32 bytes: %w", err)
-	}
-
-	for _, doc := range data {
-		hash := hashMap[string(doc.Id[:])]
-		leaf := types.MerkleData{Hash: hash}
-
-		proof, _, err := tree.GetMerklePath(leaf)
-		if err != nil {
-			return root, nil, fmt.Errorf("proof not found for %s: %w", doc.Id, err)
-		}
-
-		audit[doc.Id] = proof
-	}
-
-	return root, audit, nil
-}
-
 func FixTimestamps(from, to time.Time, interval time.Duration) (time.Time, time.Time, error) {
 	startTime, _ := time.ParseInLocation(types.TimeLayout, types.BlockchainBatchStartTime, time.UTC)
 	interval = time.Duration(interval) * time.Second
@@ -158,4 +125,79 @@ func FixTimestamps(from, to time.Time, interval time.Duration) (time.Time, time.
 	toRounded := startTime.Add(((toOffset + interval - 1) / interval) * interval)
 
 	return fromRounded, toRounded, nil
+}
+
+func CreateMerkleRoot(data []types.DocData) ([32]byte, map[uuid.UUID][][]byte, error) {
+	var leaves [][32]byte
+	indexToID := make(map[int]uuid.UUID)
+	idToHash := make(map[uuid.UUID][32]byte)
+
+	for i, doc := range data {
+		hash, _ := CalculateHash(doc.Data)
+		leaves = append(leaves, hash)
+		indexToID[i] = doc.Id
+		idToHash[doc.Id] = hash
+	}
+
+	root, tree := buildMerkleTreeSorted(leaves)
+
+	audit := make(map[uuid.UUID][][]byte)
+	for i, id := range indexToID {
+		proof := getMerkleProofSorted(tree, i)
+		audit[id] = proof
+	}
+
+	return root, audit, nil
+}
+
+func buildMerkleTreeSorted(leaves [][32]byte) ([32]byte, [][][32]byte) {
+	var tree [][][32]byte
+	tree = append(tree, leaves)
+
+	level := leaves
+	for len(level) > 1 {
+		var nextLevel [][32]byte
+		for i := 0; i < len(level); i += 2 {
+			left := level[i]
+			var right [32]byte
+			if i+1 < len(level) {
+				right = level[i+1]
+			} else {
+				right = left
+			}
+
+			if bytes.Compare(left[:], right[:]) > 0 {
+				left, right = right, left
+			}
+
+			combined := append(left[:], right[:]...)
+			parent := sha256.Sum256(combined)
+			nextLevel = append(nextLevel, parent)
+		}
+		tree = append(tree, nextLevel)
+		level = nextLevel
+	}
+
+	return tree[len(tree)-1][0], tree
+}
+
+func getMerkleProofSorted(tree [][][32]byte, index int) [][]byte {
+	var proof [][]byte
+
+	for level := 0; level < len(tree)-1; level++ {
+		layer := tree[level]
+		siblingIdx := index ^ 1
+
+		var sibling [32]byte
+		if siblingIdx < len(layer) {
+			sibling = layer[siblingIdx]
+		} else {
+			sibling = layer[index]
+		}
+
+		proof = append(proof, sibling[:])
+		index /= 2
+	}
+
+	return proof
 }

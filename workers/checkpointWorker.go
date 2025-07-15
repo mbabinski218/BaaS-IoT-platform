@@ -1,10 +1,10 @@
 package workers
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"slices"
 	"time"
@@ -12,6 +12,7 @@ import (
 	"github.com/mbabinski218/BaaS-IoT-platform/blockchain"
 	"github.com/mbabinski218/BaaS-IoT-platform/configs"
 	"github.com/mbabinski218/BaaS-IoT-platform/database"
+	"github.com/mbabinski218/BaaS-IoT-platform/services"
 	"github.com/mbabinski218/BaaS-IoT-platform/types"
 	"github.com/xuri/excelize/v2"
 )
@@ -59,27 +60,25 @@ func (cw *CheckpointWorker) performTest() {
 
 	if err = cw.blockchain.StopMining(); err != nil {
 		log.Println("Error stopping mining:", err)
-		return
 	}
 
-	err = cw.test(blockNumber)
+	err = cw.Test(blockNumber)
 	if err != nil {
 		log.Println("Test failed:", err)
-		return
 	}
 
 	if err = cw.blockchain.StartMining(); err != nil {
 		log.Println("Error starting mining:", err)
-		return
 	}
 
 	duration := time.Since(start)
 	fmt.Println("Checkpoint duration:", duration)
 }
 
-func (cw *CheckpointWorker) test(blockNumber uint64) error {
+func (cw *CheckpointWorker) Test(blockNumber uint64) error {
 	numberOfRepeats := configs.Envs.BlockchainCheckpointCallRepeats
-	apiURL := "http://" + configs.Envs.PublicHost + "/api/v1/get"
+	handler := services.NewHandler(cw.blockchain, cw.database)
+	apiURL := fmt.Sprintf("http://%s/Get", configs.Envs.PublicHost)
 
 	// Create or open Excel file
 	fileName := "getByTime_checkpoint_results.xlsx"
@@ -133,57 +132,63 @@ func (cw *CheckpointWorker) test(blockNumber uint64) error {
 		f.SetCellValue("Results", fmt.Sprintf("B%d", rowNum), blockNumber)
 
 		// API
-		var data map[string]any
+		var respWriter http.ResponseWriter
 
-		resp, err := http.Get(apiURL + fmt.Sprintf("?from=%s&to=%s", fromStartStr, toStartStr))
-		if err != nil {
-			return fmt.Errorf("API request failed: %w", err)
+		req := &http.Request{
+			Method: "GET",
+			URL: &url.URL{
+				Path:     apiURL,
+				RawQuery: fmt.Sprintf("from=%s&to=%s", url.QueryEscape(fromStartStr), url.QueryEscape(toStartStr)),
+			},
 		}
-		defer resp.Body.Close()
-
-		if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-			return fmt.Errorf("failed to decode response body: %w", err)
+		resp := handler.HandleGetFromTo(nil, req)
+		if resp == nil {
+			return fmt.Errorf("API request failed: %w", err)
 		}
 
 		// Write data
-		f.SetCellValue("Results", fmt.Sprintf("C%d", rowNum), data[types.MongoDuration])
-		f.SetCellValue("Results", fmt.Sprintf("D%d", rowNum), data[types.BlockchainDuration])
-		f.SetCellValue("Results", fmt.Sprintf("E%d", rowNum), data[types.TotalDuration])
-		f.SetCellValue("Results", fmt.Sprintf("F%d", rowNum), data[types.Missed])
+		f.SetCellValue("Results", fmt.Sprintf("C%d", rowNum), resp[types.MongoDuration])
+		f.SetCellValue("Results", fmt.Sprintf("D%d", rowNum), resp[types.BlockchainDuration])
+		f.SetCellValue("Results", fmt.Sprintf("E%d", rowNum), resp[types.TotalDuration])
+		f.SetCellValue("Results", fmt.Sprintf("F%d", rowNum), resp[types.Missed])
 
 		// API
-		resp, err = http.Get(apiURL + fmt.Sprintf("?from=%s&to=%s", fromCenterStr, toCenterStr))
-		if err != nil {
-			return fmt.Errorf("API request failed: %w", err)
+		req = &http.Request{
+			Method: "GET",
+			URL: &url.URL{
+				Path:     apiURL,
+				RawQuery: fmt.Sprintf("from=%s&to=%s", url.QueryEscape(fromCenterStr), url.QueryEscape(toCenterStr)),
+			},
 		}
-		defer resp.Body.Close()
-
-		if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-			return fmt.Errorf("failed to decode response body: %w", err)
+		resp = handler.HandleGetFromTo(nil, req)
+		if resp == nil {
+			return fmt.Errorf("API request failed: %w", err)
 		}
 
 		// Write data
-		f.SetCellValue("Results", fmt.Sprintf("G%d", rowNum), data[types.MongoDuration])
-		f.SetCellValue("Results", fmt.Sprintf("H%d", rowNum), data[types.BlockchainDuration])
-		f.SetCellValue("Results", fmt.Sprintf("I%d", rowNum), data[types.TotalDuration])
-		f.SetCellValue("Results", fmt.Sprintf("J%d", rowNum), data[types.Missed])
+		f.SetCellValue("Results", fmt.Sprintf("G%d", rowNum), resp[types.MongoDuration])
+		f.SetCellValue("Results", fmt.Sprintf("H%d", rowNum), resp[types.BlockchainDuration])
+		f.SetCellValue("Results", fmt.Sprintf("I%d", rowNum), resp[types.TotalDuration])
+		f.SetCellValue("Results", fmt.Sprintf("J%d", rowNum), resp[types.Missed])
 
 		// API
-		resp, err = http.Get(apiURL + fmt.Sprintf("?from=%s&to=%s", fromEndStr, toEndStr))
-		if err != nil {
-			return fmt.Errorf("API request failed: %w", err)
+		req = &http.Request{
+			Method: "GET",
+			URL: &url.URL{
+				Path:     apiURL,
+				RawQuery: fmt.Sprintf("from=%s&to=%s", url.QueryEscape(fromEndStr), url.QueryEscape(toEndStr)),
+			},
 		}
-		defer resp.Body.Close()
-
-		if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-			return fmt.Errorf("failed to decode response body: %w", err)
+		resp = handler.HandleGetFromTo(respWriter, req)
+		if resp != nil {
+			return fmt.Errorf("API request failed: %w", err)
 		}
 
 		// Write data
-		f.SetCellValue("Results", fmt.Sprintf("K%d", rowNum), data[types.MongoDuration])
-		f.SetCellValue("Results", fmt.Sprintf("L%d", rowNum), data[types.BlockchainDuration])
-		f.SetCellValue("Results", fmt.Sprintf("M%d", rowNum), data[types.TotalDuration])
-		f.SetCellValue("Results", fmt.Sprintf("N%d", rowNum), data[types.Missed])
+		f.SetCellValue("Results", fmt.Sprintf("K%d", rowNum), resp[types.MongoDuration])
+		f.SetCellValue("Results", fmt.Sprintf("L%d", rowNum), resp[types.BlockchainDuration])
+		f.SetCellValue("Results", fmt.Sprintf("M%d", rowNum), resp[types.TotalDuration])
+		f.SetCellValue("Results", fmt.Sprintf("N%d", rowNum), resp[types.Missed])
 
 		rowNum++
 	}
@@ -240,54 +245,57 @@ func (cw *CheckpointWorker) test(blockNumber uint64) error {
 		f.SetCellValue("Results", fmt.Sprintf("B%d", rowNum), blockNumber)
 
 		// API
-		var data map[string]any
+		var respWriter http.ResponseWriter
 
-		resp, err := http.Get(apiURL + fmt.Sprintf("/%s", firstDocId.String()))
-		if err != nil {
-			return fmt.Errorf("API request failed: %w", err)
+		req := &http.Request{
+			Method: "GET",
+			URL: &url.URL{
+				Path: fmt.Sprintf(apiURL, "/%s", firstDocId.String()),
+			},
 		}
-		defer resp.Body.Close()
-
-		if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-			return fmt.Errorf("failed to decode response body: %w", err)
+		resp := handler.HandleGetFromTo(respWriter, req)
+		if resp != nil {
+			return fmt.Errorf("API request failed: %w", err)
 		}
 
 		// Write data
-		f.SetCellValue("Results", fmt.Sprintf("C%d", rowNum), data[types.MongoDuration])
-		f.SetCellValue("Results", fmt.Sprintf("D%d", rowNum), data[types.BlockchainDuration])
-		f.SetCellValue("Results", fmt.Sprintf("E%d", rowNum), data[types.TotalDuration])
+		f.SetCellValue("Results", fmt.Sprintf("C%d", rowNum), resp[types.MongoDuration])
+		f.SetCellValue("Results", fmt.Sprintf("D%d", rowNum), resp[types.BlockchainDuration])
+		f.SetCellValue("Results", fmt.Sprintf("E%d", rowNum), resp[types.TotalDuration])
 
 		// API
-		resp, err = http.Get(apiURL + fmt.Sprintf("/%s", centerDocId.String()))
-		if err != nil {
-			return fmt.Errorf("API request failed: %w", err)
+		req = &http.Request{
+			Method: "GET",
+			URL: &url.URL{
+				Path: fmt.Sprintf(apiURL, "/%s", centerDocId.String()),
+			},
 		}
-		defer resp.Body.Close()
-
-		if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-			return fmt.Errorf("failed to decode response body: %w", err)
+		resp = handler.HandleGetFromTo(respWriter, req)
+		if resp != nil {
+			return fmt.Errorf("API request failed: %w", err)
 		}
 
 		// Write data
-		f.SetCellValue("Results", fmt.Sprintf("F%d", rowNum), data[types.MongoDuration])
-		f.SetCellValue("Results", fmt.Sprintf("G%d", rowNum), data[types.BlockchainDuration])
-		f.SetCellValue("Results", fmt.Sprintf("H%d", rowNum), data[types.TotalDuration])
+		f.SetCellValue("Results", fmt.Sprintf("F%d", rowNum), resp[types.MongoDuration])
+		f.SetCellValue("Results", fmt.Sprintf("G%d", rowNum), resp[types.BlockchainDuration])
+		f.SetCellValue("Results", fmt.Sprintf("H%d", rowNum), resp[types.TotalDuration])
 
 		// API
-		resp, err = http.Get(apiURL + fmt.Sprintf("/%s", lastDocId.String()))
-		if err != nil {
-			return fmt.Errorf("API request failed: %w", err)
+		req = &http.Request{
+			Method: "GET",
+			URL: &url.URL{
+				Path: fmt.Sprintf(apiURL, "/%s", lastDocId.String()),
+			},
 		}
-		defer resp.Body.Close()
-
-		if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-			return fmt.Errorf("failed to decode response body: %w", err)
+		resp = handler.HandleGetFromTo(respWriter, req)
+		if resp != nil {
+			return fmt.Errorf("API request failed: %w", err)
 		}
 
 		// Write data
-		f.SetCellValue("Results", fmt.Sprintf("I%d", rowNum), data[types.MongoDuration])
-		f.SetCellValue("Results", fmt.Sprintf("J%d", rowNum), data[types.BlockchainDuration])
-		f.SetCellValue("Results", fmt.Sprintf("K%d", rowNum), data[types.TotalDuration])
+		f.SetCellValue("Results", fmt.Sprintf("I%d", rowNum), resp[types.MongoDuration])
+		f.SetCellValue("Results", fmt.Sprintf("J%d", rowNum), resp[types.BlockchainDuration])
+		f.SetCellValue("Results", fmt.Sprintf("K%d", rowNum), resp[types.TotalDuration])
 
 		rowNum++
 	}
