@@ -71,8 +71,9 @@ def post_async(backend_url, package, device_index, data_id):
     def send():
         try:
             res = requests.post(f"{backend_url}/api/v1/send", json=package)
-            if res.status_code == 200 or res.status_code == 201:
-                print(f"[Device {device_index}] Data with id: {data_id} sent successfully: {res.json()}")
+            print(res.status_code)
+            if res.status_code == 201:
+                print(f"[Device {device_index}] Data with id: {data_id} sent successfully.")
             else:
                 print(f"[Device {device_index}] Failed to send data with id: {data_id}, code: {res.status_code}, res: {res.text}")
         except Exception as e:

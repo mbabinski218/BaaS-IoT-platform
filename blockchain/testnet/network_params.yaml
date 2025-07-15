@@ -5,7 +5,6 @@ participants:
 network_params:
   network_id: "585858"
   seconds_per_slot: 12
-  slots_per_epoch: 32
-  genesis_delay: 300
+  genesis_delay: 600
 additional_services:
   - dora

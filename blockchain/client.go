@@ -10,6 +10,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	typesEth "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/google/uuid"
@@ -170,20 +171,41 @@ func (c *Client) Send(dataId uuid.UUID, hash [32]byte, deviceId uuid.UUID) (time
 	}
 	sendDuration := time.Since(sendStart)
 
-	mineStart := time.Now()
-	receipt, err := bind.WaitMined(ctx, c.ethClient, transaction)
-	if err != nil {
-		return 0, 0, 0, fmt.Errorf("wait mined error: %w", err)
-	}
-	if receipt.Status != 1 {
-		return 0, 0, 0, fmt.Errorf("transaction failed: %s", transaction.Hash().Hex())
-	}
-	mineDuration := time.Since(mineStart)
+	var mineDuration time.Duration
+	if !configs.Envs.BlockchainAsyncMode {
+		mineStart := time.Now()
+		receipt, err := bind.WaitMined(ctx, c.ethClient, transaction)
+		if err != nil {
+			return 0, 0, 0, fmt.Errorf("wait mined error: %w", err)
+		}
+		if receipt.Status != 1 {
+			return 0, 0, 0, fmt.Errorf("transaction failed: %s", transaction.Hash().Hex())
+		}
+		mineDuration = time.Since(mineStart)
 
-	log.Println("Transaction hash:", transaction.Hash().Hex())
+		log.Println("Transaction hash:", transaction.Hash().Hex())
+	} else {
+		go c.mine(transaction)
+	}
 
 	duration := time.Since(start)
 	return duration, sendDuration, mineDuration, nil
+}
+
+func (c *Client) mine(transaction *typesEth.Transaction) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(configs.Envs.BlockchainContextTimeout)*2*time.Second)
+	defer cancel()
+
+	receipt, err := bind.WaitMined(ctx, c.ethClient, transaction)
+	if err != nil {
+		log.Printf("wait mined error: %v\n", err)
+		return
+	}
+	if receipt.Status != 1 {
+		log.Printf("transaction failed: %s\n", transaction.Hash().Hex())
+		return
+	}
+	log.Printf("Transaction mined successfully: %s\n", transaction.Hash().Hex())
 }
 
 func (c *Client) StoreRoot(startTimestamp time.Time, root [32]byte) error {

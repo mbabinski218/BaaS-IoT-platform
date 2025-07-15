@@ -31,6 +31,10 @@ type Config struct {
 	BlockchainValidators            string
 	BlockchainServerIP              string
 	BlockchainServerPort            string
+	BlockchainAsyncMode             bool
+	IotSimulatorCommand             string
+	IotSimulatorPath                string
+	IotSimulatorParams              string
 	AuditEnabled                    bool
 	AuditTimeout                    int64
 	AuditSize                       int64
@@ -63,6 +67,10 @@ func initConfig() Config {
 		BlockchainValidators:            getEnv("BLOCKCHAIN_VALIDATORS", ""),
 		BlockchainServerIP:              getEnv("BLOCKCHAIN_SERVER_IP", "127.0.0.1"),
 		BlockchainServerPort:            getEnv("BLOCKCHAIN_SERVER_PORT", "22"),
+		BlockchainAsyncMode:             getEnvAsBool("BLOCKCHAIN_ASYNC_MODE", true), // Default is true
+		IotSimulatorCommand:             getEnv("IOT_SIMULATOR_COMMAND", ""),
+		IotSimulatorPath:                getEnv("IOT_SIMULATOR_PATH", ""),
+		IotSimulatorParams:              getEnv("IOT_SIMULATOR_PARAMS", ""),
 		AuditEnabled:                    getEnvAsBool("AUDIT_ENABLED", false),
 		AuditTimeout:                    getEnvAsInt("AUDIT_TIMEOUT", 3600000), // Default is 1 hour in milliseconds
 		AuditSize:                       getEnvAsInt("AUDIT_SIZE", 1000),

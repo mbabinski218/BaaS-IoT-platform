@@ -8,6 +8,7 @@ import (
 	"github.com/mbabinski218/BaaS-IoT-platform/blockchain"
 	"github.com/mbabinski218/BaaS-IoT-platform/configs"
 	"github.com/mbabinski218/BaaS-IoT-platform/database"
+	"github.com/mbabinski218/BaaS-IoT-platform/runners"
 	"github.com/mbabinski218/BaaS-IoT-platform/types"
 	"github.com/mbabinski218/BaaS-IoT-platform/workers"
 )
@@ -43,6 +44,10 @@ func main() {
 
 	for _, worker := range backgroundWorkers {
 		go worker.Start()
+	}
+
+	if err := runners.RunIotSimulator(ethClient); err != nil {
+		log.Fatal(err)
 	}
 
 	// Start the API server
