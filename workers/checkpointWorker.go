@@ -81,7 +81,7 @@ func (cw *CheckpointWorker) Test(blockNumber uint64) error {
 	apiURL := fmt.Sprintf("http://%s/Get", configs.Envs.PublicHost)
 
 	// Create or open Excel file
-	fileName := "getByTime_checkpoint_results.xlsx"
+	fileName := fmt.Sprintf("getByTime_checkpoint_results_%s.xlsx", time.Now().Format("20060102_150405"))
 	var f *excelize.File
 	if _, err := os.Stat(fileName); os.IsNotExist(err) {
 		f = excelize.NewFile()
@@ -112,12 +112,12 @@ func (cw *CheckpointWorker) Test(blockNumber uint64) error {
 	rowNum := len(rows) + 1
 
 	// Get by time
-	fromStart := cw.startTime.Add(time.Duration(configs.Envs.BlockchainBatchInterval) * time.Second)
-	toStart := fromStart.Add(time.Duration(configs.Envs.BlockchainBatchInterval) * time.Second)
-	fromCenter := cw.startTime.Add(time.Duration(configs.Envs.BlockchainBatchInterval*int64(blockNumber/2)) * time.Second)
-	toCenter := fromCenter.Add(time.Duration(configs.Envs.BlockchainBatchInterval) * time.Second)
-	fromEnd := cw.startTime.Add(time.Duration(configs.Envs.BlockchainBatchInterval*int64(blockNumber)) * time.Second)
-	toEnd := fromEnd.Add(time.Duration(configs.Envs.BlockchainBatchInterval) * time.Second)
+	fromStart := cw.startTime.Add(time.Duration(configs.Envs.BlockchainBatchInterval*5) * time.Second).Truncate(time.Second)
+	toStart := fromStart.Add(time.Duration(configs.Envs.BlockchainBatchInterval) * time.Second).Truncate(time.Second)
+	fromCenter := cw.startTime.Add(time.Duration(configs.Envs.BlockchainBatchInterval*int64(blockNumber/2)) * time.Second).Truncate(time.Second)
+	toCenter := fromCenter.Add(time.Duration(configs.Envs.BlockchainBatchInterval) * time.Second).Truncate(time.Second)
+	fromEnd := cw.startTime.Add(time.Duration(configs.Envs.BlockchainBatchInterval*int64(blockNumber-5)) * time.Second).Truncate(time.Second)
+	toEnd := fromEnd.Add(time.Duration(configs.Envs.BlockchainBatchInterval) * time.Second).Truncate(time.Second)
 
 	fromStartStr := fromStart.Format(types.TimeLayout)
 	toStartStr := toStart.Format(types.TimeLayout)
@@ -143,7 +143,7 @@ func (cw *CheckpointWorker) Test(blockNumber uint64) error {
 		}
 		resp := handler.HandleGetFromTo(nil, req)
 		if resp == nil {
-			return fmt.Errorf("API request failed: %w", err)
+			return fmt.Errorf("1.API request failed: resp is nil")
 		}
 
 		// Write data
@@ -162,7 +162,7 @@ func (cw *CheckpointWorker) Test(blockNumber uint64) error {
 		}
 		resp = handler.HandleGetFromTo(nil, req)
 		if resp == nil {
-			return fmt.Errorf("API request failed: %w", err)
+			return fmt.Errorf("2.API request failed: resp is nil")
 		}
 
 		// Write data
@@ -180,8 +180,8 @@ func (cw *CheckpointWorker) Test(blockNumber uint64) error {
 			},
 		}
 		resp = handler.HandleGetFromTo(respWriter, req)
-		if resp != nil {
-			return fmt.Errorf("API request failed: %w", err)
+		if resp == nil {
+			return fmt.Errorf("3.API request failed: resp is nil")
 		}
 
 		// Write data
@@ -195,11 +195,11 @@ func (cw *CheckpointWorker) Test(blockNumber uint64) error {
 
 	// Save file
 	if err := f.SaveAs(fileName); err != nil {
-		return fmt.Errorf("failed to save Excel file: %w", err)
+		return fmt.Errorf("API request failed: %w", err)
 	}
 
 	// Create or open Excel file
-	fileName = "getById_checkpoint_results.xlsx"
+	fileName = fmt.Sprintf("getById_checkpoint_results_%s.xlsx", time.Now().Format("20060102_150405"))
 	if _, err := os.Stat(fileName); os.IsNotExist(err) {
 		f = excelize.NewFile()
 		f.SetSheetName("Sheet1", "Results")
@@ -215,7 +215,7 @@ func (cw *CheckpointWorker) Test(blockNumber uint64) error {
 		f.SetCellValue("Results", "J1", "Last - Blockchain duration")
 		f.SetCellValue("Results", "K1", "Last - Total duration")
 	} else {
-		return fmt.Errorf("file %s already exists", fileName)
+		return fmt.Errorf("API request failed: resp is nil")
 	}
 
 	// Find next empty row
@@ -253,9 +253,9 @@ func (cw *CheckpointWorker) Test(blockNumber uint64) error {
 				Path: fmt.Sprintf(apiURL, "/%s", firstDocId.String()),
 			},
 		}
-		resp := handler.HandleGetFromTo(respWriter, req)
-		if resp != nil {
-			return fmt.Errorf("API request failed: %w", err)
+		resp := handler.HandleGet(respWriter, req)
+		if resp == nil {
+			return fmt.Errorf("4.API request failed: resp is nil")
 		}
 
 		// Write data
@@ -270,9 +270,9 @@ func (cw *CheckpointWorker) Test(blockNumber uint64) error {
 				Path: fmt.Sprintf(apiURL, "/%s", centerDocId.String()),
 			},
 		}
-		resp = handler.HandleGetFromTo(respWriter, req)
-		if resp != nil {
-			return fmt.Errorf("API request failed: %w", err)
+		resp = handler.HandleGet(respWriter, req)
+		if resp == nil {
+			return fmt.Errorf("5.API request failed: resp is nil")
 		}
 
 		// Write data
@@ -287,9 +287,9 @@ func (cw *CheckpointWorker) Test(blockNumber uint64) error {
 				Path: fmt.Sprintf(apiURL, "/%s", lastDocId.String()),
 			},
 		}
-		resp = handler.HandleGetFromTo(respWriter, req)
-		if resp != nil {
-			return fmt.Errorf("API request failed: %w", err)
+		resp = handler.HandleGet(respWriter, req)
+		if resp == nil {
+			return fmt.Errorf("6.API request failed: resp is nil")
 		}
 
 		// Write data

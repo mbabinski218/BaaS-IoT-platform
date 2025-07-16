@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/mbabinski218/BaaS-IoT-platform/blockchain"
+	"github.com/mbabinski218/BaaS-IoT-platform/configs"
 	"github.com/mbabinski218/BaaS-IoT-platform/database"
 	"github.com/mbabinski218/BaaS-IoT-platform/types"
 	"github.com/mbabinski218/BaaS-IoT-platform/utils"
@@ -28,7 +29,12 @@ func NewBatchWorker(interval int64, db *database.Client, bc *blockchain.Client, 
 }
 
 func (bw *BatchWorker) Start() {
-	startTime, _ := time.ParseInLocation(types.TimeLayout, types.BlockchainBatchStartTime, time.UTC)
+	st := configs.Envs.BlockchainCustomBatchStartTime
+	if st == "" {
+		st = types.BlockchainBatchStartTime
+	}
+
+	startTime, _ := time.ParseInLocation(types.TimeLayout, st, time.UTC)
 	elapsed := time.Since(startTime)
 
 	interval := time.Duration(bw.Interval) * time.Second
@@ -37,7 +43,14 @@ func (bw *BatchWorker) Start() {
 	nextTick := startTime.Add((ticks + 1) * interval)
 
 	time.Sleep(time.Until(nextTick))
-	bw.startTime = &nextTick
+
+	if st == types.BlockchainBatchStartTime {
+		t := nextTick.Add(2 * time.Hour).Truncate(time.Second)
+		*bw.startTime = t
+	} else {
+		t := startTime.Truncate(time.Second)
+		*bw.startTime = t
+	}
 
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()

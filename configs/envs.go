@@ -32,6 +32,7 @@ type Config struct {
 	BlockchainServerIP              string
 	BlockchainServerPort            string
 	BlockchainAsyncMode             bool
+	BlockchainCustomBatchStartTime  string
 	IotSimulatorCommand             string
 	IotSimulatorPath                string
 	IotSimulatorParams              string
@@ -68,6 +69,7 @@ func initConfig() Config {
 		BlockchainServerIP:              getEnv("BLOCKCHAIN_SERVER_IP", "127.0.0.1"),
 		BlockchainServerPort:            getEnv("BLOCKCHAIN_SERVER_PORT", "22"),
 		BlockchainAsyncMode:             getEnvAsBool("BLOCKCHAIN_ASYNC_MODE", true), // Default is true
+		BlockchainCustomBatchStartTime:  getEnv("BLOCKCHAIN_CUSTOM_BATCH_START_TIME", ""),
 		IotSimulatorCommand:             getEnv("IOT_SIMULATOR_COMMAND", ""),
 		IotSimulatorPath:                getEnv("IOT_SIMULATOR_PATH", ""),
 		IotSimulatorParams:              getEnv("IOT_SIMULATOR_PARAMS", ""),

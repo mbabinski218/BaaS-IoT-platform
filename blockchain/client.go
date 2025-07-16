@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/big"
 	"os/exec"
+	"slices"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -511,4 +512,21 @@ func (c *Client) StartMining() error {
 	}
 
 	return nil
+}
+
+func (c *Client) IsMining() bool {
+	cmd := exec.Command("ssh", "-p "+configs.Envs.BlockchainServerPort, configs.Envs.BlockchainServerIP, "docker", "inspect", "--format={{.State.Running}}", configs.Envs.BlockchainValidators)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return false
+	}
+
+	lines := []string{}
+	for _, line := range string(output) {
+		if line == '\r' || line == '\n' {
+			continue
+		}
+		lines = append(lines, string(line))
+	}
+	return !slices.Contains(lines, "false")
 }

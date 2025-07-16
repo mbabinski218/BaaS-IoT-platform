@@ -270,18 +270,32 @@ func (c *Client) GetFirstDocumentId() (uuid.UUID, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(configs.Envs.MongoContextTimeout)*time.Second)
 	defer cancel()
 
-	opts := options.FindOne().SetSort(bson.D{{Key: "_id", Value: 1}})
-
-	var result map[string]any
-	err := c.collection.FindOne(ctx, bson.M{}, opts).Decode(&result)
+	count, err := c.collection.CountDocuments(ctx, bson.M{})
 	if err != nil {
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			return uuid.Nil, fmt.Errorf("no documents found")
-		}
-		return uuid.Nil, fmt.Errorf("failed to get first document: %v", err)
+		return uuid.Nil, fmt.Errorf("failed to count documents: %v", err)
 	}
 
-	return result["_id"].(uuid.UUID), nil
+	if count == 0 {
+		return uuid.Nil, fmt.Errorf("no documents found")
+	}
+
+	opts := options.FindOne().SetSkip(10)
+
+	var result map[string]any
+	err = c.collection.FindOne(ctx, bson.M{}, opts).Decode(&result)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return uuid.Nil, fmt.Errorf("no documents found at center")
+		}
+		return uuid.Nil, fmt.Errorf("failed to get center document: %v", err)
+	}
+
+	id, err := utils.ToUUID(result["_id"])
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("failed to convert first document ID to UUID: %v", err)
+	}
+
+	return id, nil
 }
 
 func (c *Client) GetCenterDocumentId() (uuid.UUID, error) {
@@ -309,23 +323,43 @@ func (c *Client) GetCenterDocumentId() (uuid.UUID, error) {
 		return uuid.Nil, fmt.Errorf("failed to get center document: %v", err)
 	}
 
-	return result["_id"].(uuid.UUID), nil
+	id, err := utils.ToUUID(result["_id"])
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("failed to convert first document ID to UUID: %v", err)
+	}
+
+	return id, nil
 }
 
 func (c *Client) GetLastDocumentId() (uuid.UUID, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(configs.Envs.MongoContextTimeout)*time.Second)
 	defer cancel()
 
-	opts := options.FindOne().SetSort(bson.D{{Key: "_id", Value: -1}})
-
-	var result map[string]any
-	err := c.collection.FindOne(ctx, bson.M{}, opts).Decode(&result)
+	count, err := c.collection.CountDocuments(ctx, bson.M{})
 	if err != nil {
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			return uuid.Nil, fmt.Errorf("no documents found")
-		}
-		return uuid.Nil, fmt.Errorf("failed to get last document: %v", err)
+		return uuid.Nil, fmt.Errorf("failed to count documents: %v", err)
 	}
 
-	return result["_id"].(uuid.UUID), nil
+	if count == 0 {
+		return uuid.Nil, fmt.Errorf("no documents found")
+	}
+
+	skip := count - 10
+	opts := options.FindOne().SetSkip(skip)
+
+	var result map[string]any
+	err = c.collection.FindOne(ctx, bson.M{}, opts).Decode(&result)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return uuid.Nil, fmt.Errorf("no documents found at center")
+		}
+		return uuid.Nil, fmt.Errorf("failed to get center document: %v", err)
+	}
+
+	id, err := utils.ToUUID(result["_id"])
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("failed to convert first document ID to UUID: %v", err)
+	}
+
+	return id, nil
 }

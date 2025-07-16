@@ -18,7 +18,7 @@ func RunIotSimulator(bc *blockchain.Client) error {
 			log.Fatalf("failed to get block number: %v", err)
 		}
 
-		if blockNumber > 0 {
+		if blockNumber > 0 && bc.IsMining() {
 			break
 		}
 

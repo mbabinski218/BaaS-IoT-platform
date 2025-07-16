@@ -26,6 +26,11 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// Iot simulator initialization
+	if err := runners.RunIotSimulator(ethClient); err != nil {
+		log.Fatal(err)
+	}
+
 	// Workers initialization
 	startTime := time.Now()
 	backgroundWorkers := []workers.Worker{}
@@ -44,10 +49,6 @@ func main() {
 
 	for _, worker := range backgroundWorkers {
 		go worker.Start()
-	}
-
-	if err := runners.RunIotSimulator(ethClient); err != nil {
-		log.Fatal(err)
 	}
 
 	// Start the API server
