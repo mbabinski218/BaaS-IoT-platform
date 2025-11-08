@@ -18,9 +18,8 @@ contract DataHashRegistryTest is Test {
 
         registry.storeHash(id, hash, iotId);
 
-        (bytes32 storedHash,, uint256 ts, address sender) = registry.records(id);
+        (bytes32 storedHash, bytes16 storedIotId, address sender) = registry.records(id);
         assertEq(storedHash, hash);
-        assertEq(ts > 0, true);
         assertEq(sender, address(this));
         assertTrue(registry.verifyHash(id, hash));
     }
@@ -33,9 +32,8 @@ contract DataHashRegistryTest is Test {
 
         registry.storeHash(id, hash, iotId);
 
-        (bytes32 storedHash,, uint256 ts, address sender) = registry.records(id);
+        (bytes32 storedHash, bytes16 storedIotId, address sender) = registry.records(id);
         assertEq(storedHash, hash);
-        assertEq(ts > 0, true);
         assertEq(sender, address(this));
         assertFalse(registry.verifyHash(id, incorrectHash));
     }

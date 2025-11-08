@@ -69,19 +69,13 @@ func ensureCollectionExists(db *mongo.Database, collectionName string) error {
 	return nil
 }
 
-func (c *Client) Add(dataId uuid.UUID, data map[string]any, deviceId uuid.UUID) (uuid.UUID, time.Duration, error) {
+func (c *Client) Add(document bson.M) (uuid.UUID, time.Duration, error) {
 	start := time.Now()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(configs.Envs.MongoContextTimeout)*time.Second)
 	defer cancel()
 
-	doc := bson.M{
-		"_id":       utils.ToBinaryUUID(dataId),
-		"device_id": utils.ToBinaryUUID(deviceId),
-		"data":      data,
-	}
-
-	res, err := c.collection.InsertOne(ctx, doc)
+	res, err := c.collection.InsertOne(ctx, document)
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
 			log.Println("Insert timed out")

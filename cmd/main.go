@@ -13,7 +13,11 @@ import (
 	"github.com/mbabinski218/BaaS-IoT-platform/workers"
 )
 
+const Version = "7.3.6"
+
 func main() {
+	log.Printf("BaaS IoT Platform v%s", Version)
+
 	// Database initialization
 	databaseClient, err := database.Connect(configs.Envs.MongoDbUri, configs.Envs.MongoDbName, configs.Envs.MongoDbCollectionName)
 	if err != nil {
@@ -27,7 +31,8 @@ func main() {
 	}
 
 	// Iot simulator initialization
-	if err := runners.RunIotSimulator(ethClient); err != nil {
+	simulatorIot, err := runners.RunIotSimulator(ethClient)
+	if err != nil {
 		log.Fatal(err)
 	}
 
@@ -39,12 +44,16 @@ func main() {
 		backgroundWorkers = append(backgroundWorkers, workers.NewAuditWorker(configs.Envs.AuditTimeout, configs.Envs.AuditSize, databaseClient, ethClient))
 	}
 
-	if configs.Envs.BlockchainMode == types.BCBatchCheck {
+	if configs.Envs.BlockchainMode == types.BCPeriodicBatchCheck {
 		backgroundWorkers = append(backgroundWorkers, workers.NewBatchWorker(configs.Envs.BlockchainBatchInterval, databaseClient, ethClient, &startTime))
 	}
 
 	if len(configs.Envs.BlockchainCheckpoints) > 0 {
 		backgroundWorkers = append(backgroundWorkers, workers.NewCheckpointWorker(databaseClient, ethClient, &startTime))
+	}
+
+	if configs.Envs.AuditTimeout > 0 {
+		backgroundWorkers = append(backgroundWorkers, workers.NewTimeWorker(databaseClient, ethClient, &startTime))
 	}
 
 	for _, worker := range backgroundWorkers {
@@ -54,6 +63,9 @@ func main() {
 	// Start the API server
 	server := api.NewAPIServer(configs.Envs.PublicHost, ethClient, databaseClient)
 	if err := server.Run(); err != nil {
+		simulatorIot.Process.Kill()
 		log.Fatal(err)
 	}
+
+	simulatorIot.Process.Kill()
 }

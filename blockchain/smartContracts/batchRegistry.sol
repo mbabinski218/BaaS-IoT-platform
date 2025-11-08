@@ -1,20 +1,28 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.30;
 
 contract BatchRegistry {
     mapping(uint256 => bytes32) public roots;
 
     function storeRoot(uint256 batchTime, bytes32 merkleRoot) external {
+        require(batchTime != 0, "Zero batchTime not allowed");
+        require(merkleRoot != bytes32(0), "Zero merkleRoot not allowed");
         require(roots[batchTime] == 0, "Already stored for this batch time");
 
         roots[batchTime] = merkleRoot;
     }
 
     function verifyRoot(uint256 batchTime, bytes32 providedMerkleRoot) external view returns (bool) {
+        require(batchTime != 0, "Zero batchTime not allowed");
+        require(providedMerkleRoot != bytes32(0), "Zero providedMerkleRoot not allowed");
+
         return roots[batchTime] == providedMerkleRoot;
     }
 
     function verifyProof(uint256 batchTime, bytes32 leaf, bytes32[] calldata proof) external view returns (bool) {
+        require(batchTime != 0, "Zero batchTime not allowed");
+        require(leaf != bytes32(0), "Zero leaf not allowed");
+
         bytes32 computedHash = leaf;
 
         for (uint256 i = 0; i < proof.length; i++) {

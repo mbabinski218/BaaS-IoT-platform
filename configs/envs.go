@@ -28,11 +28,13 @@ type Config struct {
 	BlockchainSecondsPerBlock       int64
 	BlockchainCheckpoints           []uint64
 	BlockchainCheckpointCallRepeats int64
+	BlockchainMaxDocuments          []uint64
 	BlockchainValidators            string
 	BlockchainServerIP              string
 	BlockchainServerPort            string
 	BlockchainAsyncMode             bool
 	BlockchainCustomBatchStartTime  string
+	BlockchainLogSendToFile         bool
 	IotSimulatorCommand             string
 	IotSimulatorPath                string
 	IotSimulatorParams              string
@@ -65,11 +67,13 @@ func initConfig() Config {
 		BlockchainSecondsPerBlock:       getEnvAsInt("BLOCKCHAIN_SECONDS_PER_BLOCK", 15), // Default is 15 seconds
 		BlockchainCheckpoints:           getEnvAsUintArray("BLOCKCHAIN_CHECKPOINTS", []uint64{}),
 		BlockchainCheckpointCallRepeats: getEnvAsInt("BLOCKCHAIN_CHECKPOINT_CALL_REPEATS", 10), // Default is 10 repeats
+		BlockchainMaxDocuments:          getEnvAsUintArray("BLOCKCHAIN_MAX_DOCUMENTS", []uint64{}),
 		BlockchainValidators:            getEnv("BLOCKCHAIN_VALIDATORS", ""),
 		BlockchainServerIP:              getEnv("BLOCKCHAIN_SERVER_IP", "127.0.0.1"),
 		BlockchainServerPort:            getEnv("BLOCKCHAIN_SERVER_PORT", "22"),
 		BlockchainAsyncMode:             getEnvAsBool("BLOCKCHAIN_ASYNC_MODE", true), // Default is true
 		BlockchainCustomBatchStartTime:  getEnv("BLOCKCHAIN_CUSTOM_BATCH_START_TIME", ""),
+		BlockchainLogSendToFile:         getEnvAsBool("BLOCKCHAIN_LOG_SEND_TO_FILE", false),
 		IotSimulatorCommand:             getEnv("IOT_SIMULATOR_COMMAND", ""),
 		IotSimulatorPath:                getEnv("IOT_SIMULATOR_PATH", ""),
 		IotSimulatorParams:              getEnv("IOT_SIMULATOR_PARAMS", ""),
@@ -123,7 +127,7 @@ func getEnvAsBCMode(key string, fallback types.BlockchainMode) types.BlockchainM
 		case "Full":
 			return types.BCFullCheck
 		case "Batch":
-			return types.BCBatchCheck
+			return types.BCPeriodicBatchCheck
 		default:
 			return fallback
 		}

@@ -9,11 +9,13 @@ import (
 	"slices"
 	"time"
 
+	"github.com/gorilla/mux"
 	"github.com/mbabinski218/BaaS-IoT-platform/blockchain"
 	"github.com/mbabinski218/BaaS-IoT-platform/configs"
 	"github.com/mbabinski218/BaaS-IoT-platform/database"
 	"github.com/mbabinski218/BaaS-IoT-platform/services"
 	"github.com/mbabinski218/BaaS-IoT-platform/types"
+	"github.com/mbabinski218/BaaS-IoT-platform/utils"
 	"github.com/xuri/excelize/v2"
 )
 
@@ -41,11 +43,19 @@ func (cw *CheckpointWorker) Start() {
 	log.Println("Checkpoint worker started with interval:", interval, "seconds")
 
 	for range ticker.C {
-		cw.performTest()
+		cw.performTestMaxDocuments()
+		cw.performTestBlocks()
 	}
 }
 
-func (cw *CheckpointWorker) performTest() {
+func (cw *CheckpointWorker) performTestMaxDocuments() {
+	// start := time.Now()
+	// maxDocuments := configs.Envs.BlockchainMaxDocuments
+
+	// docCount, err := cw.database.GetAuditData()
+}
+
+func (cw *CheckpointWorker) performTestBlocks() {
 	start := time.Now()
 
 	blockNumber, err := cw.blockchain.GetBlockNumber()
@@ -61,6 +71,7 @@ func (cw *CheckpointWorker) performTest() {
 	if err = cw.blockchain.StopMining(); err != nil {
 		log.Println("Error stopping mining:", err)
 	}
+	utils.PauseSimulatorFile()
 
 	err = cw.Test(blockNumber)
 	if err != nil {
@@ -70,6 +81,7 @@ func (cw *CheckpointWorker) performTest() {
 	if err = cw.blockchain.StartMining(); err != nil {
 		log.Println("Error starting mining:", err)
 	}
+	utils.ResumeSimulatorFile()
 
 	duration := time.Since(start)
 	fmt.Println("Checkpoint duration:", duration)
@@ -78,10 +90,10 @@ func (cw *CheckpointWorker) performTest() {
 func (cw *CheckpointWorker) Test(blockNumber uint64) error {
 	numberOfRepeats := configs.Envs.BlockchainCheckpointCallRepeats
 	handler := services.NewHandler(cw.blockchain, cw.database)
-	apiURL := fmt.Sprintf("http://%s/Get", configs.Envs.PublicHost)
+	apiURL := fmt.Sprintf("http://%s/get", configs.Envs.PublicHost)
 
 	// Create or open Excel file
-	fileName := fmt.Sprintf("getByTime_checkpoint_results_%s.xlsx", time.Now().Format("20060102_150405"))
+	fileName := fmt.Sprintf("D:\\Studia_mgr\\Praca_magisterska\\Results\\getByTime_checkpoint_results_%s.xlsx", time.Now().Format("20060102_150405"))
 	var f *excelize.File
 	if _, err := os.Stat(fileName); os.IsNotExist(err) {
 		f = excelize.NewFile()
@@ -230,14 +242,17 @@ func (cw *CheckpointWorker) Test(blockNumber uint64) error {
 	if err != nil {
 		return fmt.Errorf("failed to get first document ID: %w", err)
 	}
+	firstDocIdStr := firstDocId.String()
 	centerDocId, err := cw.database.GetCenterDocumentId()
 	if err != nil {
 		return fmt.Errorf("failed to get center document ID: %w", err)
 	}
+	centerDocIdStr := centerDocId.String()
 	lastDocId, err := cw.database.GetLastDocumentId()
 	if err != nil {
 		return fmt.Errorf("failed to get last document ID: %w", err)
 	}
+	lastDocIdStr := lastDocId.String()
 
 	for range numberOfRepeats {
 		// Write data
@@ -247,12 +262,8 @@ func (cw *CheckpointWorker) Test(blockNumber uint64) error {
 		// API
 		var respWriter http.ResponseWriter
 
-		req := &http.Request{
-			Method: "GET",
-			URL: &url.URL{
-				Path: fmt.Sprintf(apiURL, "/%s", firstDocId.String()),
-			},
-		}
+		req, _ := http.NewRequest("GET", apiURL+"/"+firstDocIdStr, nil)
+		req = mux.SetURLVars(req, map[string]string{"dataId": firstDocIdStr})
 		resp := handler.HandleGet(respWriter, req)
 		if resp == nil {
 			return fmt.Errorf("4.API request failed: resp is nil")
@@ -264,12 +275,8 @@ func (cw *CheckpointWorker) Test(blockNumber uint64) error {
 		f.SetCellValue("Results", fmt.Sprintf("E%d", rowNum), resp[types.TotalDuration])
 
 		// API
-		req = &http.Request{
-			Method: "GET",
-			URL: &url.URL{
-				Path: fmt.Sprintf(apiURL, "/%s", centerDocId.String()),
-			},
-		}
+		req, _ = http.NewRequest("GET", apiURL+"/"+centerDocIdStr, nil)
+		req = mux.SetURLVars(req, map[string]string{"dataId": centerDocIdStr})
 		resp = handler.HandleGet(respWriter, req)
 		if resp == nil {
 			return fmt.Errorf("5.API request failed: resp is nil")
@@ -281,12 +288,8 @@ func (cw *CheckpointWorker) Test(blockNumber uint64) error {
 		f.SetCellValue("Results", fmt.Sprintf("H%d", rowNum), resp[types.TotalDuration])
 
 		// API
-		req = &http.Request{
-			Method: "GET",
-			URL: &url.URL{
-				Path: fmt.Sprintf(apiURL, "/%s", lastDocId.String()),
-			},
-		}
+		req, _ = http.NewRequest("GET", apiURL+"/"+lastDocIdStr, nil)
+		req = mux.SetURLVars(req, map[string]string{"dataId": lastDocIdStr})
 		resp = handler.HandleGet(respWriter, req)
 		if resp == nil {
 			return fmt.Errorf("6.API request failed: resp is nil")

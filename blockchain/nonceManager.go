@@ -42,7 +42,7 @@ func (nonceManager *NonceManager) Init(client *ethclient.Client, from common.Add
 	return nil
 }
 
-func (nonceManager *NonceManager) Next() *big.Int {
+func (nonceManager *NonceManager) NextNonce() *big.Int {
 	nonceManager.mutex.Lock()
 	defer nonceManager.mutex.Unlock()
 

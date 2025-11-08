@@ -2,7 +2,11 @@ package services
 
 import (
 	"fmt"
+	"log"
 	"net/http"
+	"net/url"
+	"os"
+	"slices"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -13,11 +17,13 @@ import (
 	"github.com/mbabinski218/BaaS-IoT-platform/database"
 	"github.com/mbabinski218/BaaS-IoT-platform/types"
 	"github.com/mbabinski218/BaaS-IoT-platform/utils"
+	"github.com/xuri/excelize/v2"
 )
 
 type Handler struct {
 	blockchain *blockchain.Client
 	database   *database.Client
+	docCount   uint64
 }
 
 func NewHandler(bc *blockchain.Client, db *database.Client) *Handler {
@@ -52,6 +58,8 @@ func (h *Handler) HandleSend(w http.ResponseWriter, r *http.Request) map[string]
 		return nil
 	}
 
+	bsonDoc := utils.MapToBSON(payload)
+
 	if err := utils.Validate.Struct(payload); err != nil {
 		errors := err.(validator.ValidationErrors)
 		utils.WriteError(w, http.StatusBadRequest, fmt.Errorf("invalid payload: %v", errors))
@@ -64,13 +72,13 @@ func (h *Handler) HandleSend(w http.ResponseWriter, r *http.Request) map[string]
 		return nil
 	}
 
-	createdId, mongoDuration, err := h.database.Add(payload.DataId, payload.Data, payload.DeviceId)
+	createdId, mongoDuration, err := h.database.Add(bsonDoc)
 	if err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("failed to add data with id: %s to database: %w", payload.DataId, err))
 		return nil
 	}
 
-	blockchainDuration, blockchainSendDuration, blockchainMinedDuration, err := h.blockchain.Send(payload.DataId, hash, payload.DeviceId)
+	blockchainDuration, blockchainSendDuration, err := h.blockchain.Send(payload.DataId, hash, payload.DeviceId)
 	if err != nil {
 		h.database.Delete(createdId)
 
@@ -86,15 +94,30 @@ func (h *Handler) HandleSend(w http.ResponseWriter, r *http.Request) map[string]
 	fmt.Println("MongoDB duration:", mongoDuration)
 	fmt.Println("Blockchain duration:", blockchainDuration)
 	fmt.Println("Blockchain send duration:", blockchainSendDuration)
-	fmt.Println("Blockchain mined duration:", blockchainMinedDuration)
 	fmt.Println("Total duration:", duration)
 
+	if configs.Envs.BlockchainLogSendToFile {
+		LogSendToFile(createdId, mongoDuration, blockchainDuration, blockchainSendDuration)
+	}
+
 	result := make(map[string]any)
-	result["mongoDuration"] = mongoDuration.String()
-	result["blockchainDuration"] = blockchainDuration.String()
-	result["duration"] = duration.String()
+	result[types.MongoDuration] = mongoDuration.String()
+	result[types.BlockchainDuration] = blockchainDuration.String()
+	result[types.TotalDuration] = duration.String()
 	utils.WriteJSON(w, http.StatusOK, result)
+
+	h.docCount++
+	fmt.Println("Document count:", h.docCount)
+	if slices.Contains(configs.Envs.BlockchainMaxDocuments, h.docCount) {
+		if err := h.Audit(h.docCount); err != nil {
+			log.Printf("failed to create audit report: %v", err)
+		}
+	}
+
 	return result
+
+	// h.Audit(0)
+	// return make(map[string]any)
 }
 
 func (h *Handler) HandleGet(w http.ResponseWriter, r *http.Request) map[string]any {
@@ -145,7 +168,7 @@ func (h *Handler) HandleGet(w http.ResponseWriter, r *http.Request) map[string]a
 		return nil
 	}
 
-	if configs.Envs.BlockchainMode == types.BCBatchCheck && proof == nil {
+	if configs.Envs.BlockchainMode == types.BCPeriodicBatchCheck && proof == nil {
 		doc["verified"] = false
 	}
 
@@ -157,9 +180,9 @@ func (h *Handler) HandleGet(w http.ResponseWriter, r *http.Request) map[string]a
 
 	result := make(map[string]any)
 	result["data"] = doc
-	result["mongoDuration"] = mongoDuration.String()
-	result["blockchainDuration"] = blockchainDuration.String()
-	result["duration"] = duration.String()
+	result[types.MongoDuration] = mongoDuration.String()
+	result[types.BlockchainDuration] = blockchainDuration.String()
+	result[types.TotalDuration] = duration.String()
 	utils.WriteJSON(w, http.StatusOK, result)
 	return result
 }
@@ -215,7 +238,7 @@ func (h *Handler) HandleGetFromTo(w http.ResponseWriter, r *http.Request) map[st
 		return nil
 	}
 
-	success, blockchainDuration, err := h.blockchain.VerifyHashes(docs, fixedFromTimestamp, fixedToTimestamp)
+	success, blockchainDuration, err := h.blockchain.VerifyHashes(docs, fixedFromTimestamp, fixedToTimestamp, true)
 	if err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, fmt.Errorf("blockchain error: %v", err))
 		return nil
@@ -268,4 +291,91 @@ func (h *Handler) HandleGetBlockNumber(w http.ResponseWriter, r *http.Request) {
 	} else {
 		utils.WriteJSON(w, http.StatusOK, blockNumber)
 	}
+}
+
+func (h *Handler) Audit(count uint64) error {
+	if err := h.blockchain.StopMining(); err != nil {
+		log.Println("Error stopping mining:", err)
+	}
+	utils.PauseSimulatorFile()
+
+	apiURL := fmt.Sprintf("http://%s/get", configs.Envs.PublicHost)
+
+	fileName := fmt.Sprintf("D:\\Studia_mgr\\Praca_magisterska\\Results\\audit_results_%s_%d.xlsx", configs.Envs.BlockchainMode.String(), count)
+	var f *excelize.File
+	if _, err := os.Stat(fileName); os.IsNotExist(err) {
+		f = excelize.NewFile()
+		f.SetSheetName("Sheet1", "Results")
+		f.SetCellValue("Results", "A1", "Timestamp")
+		f.SetCellValue("Results", "B1", "Db duration")
+		f.SetCellValue("Results", "C1", "Blockchain duration")
+		f.SetCellValue("Results", "D1", "Total duration")
+		f.SetCellValue("Results", "E1", "Missed")
+	} else {
+		return fmt.Errorf("file %s already exists", fileName)
+	}
+
+	for range configs.Envs.BlockchainCheckpointCallRepeats {
+		// Find next empty row
+		rows, err := f.GetRows("Results")
+		if err != nil {
+			return fmt.Errorf("failed to get rows: %w", err)
+		}
+		rowNum := len(rows) + 1
+
+		f.SetCellValue("Results", fmt.Sprintf("A%d", rowNum), time.Now().Format(types.TimeLayout))
+
+		req := &http.Request{
+			Method: "GET",
+			URL: &url.URL{
+				Path:     apiURL,
+				RawQuery: "from=2025-01-01T00:00:00.000000&to=2026-01-01T00:00:00.000000",
+			},
+		}
+		resp := h.HandleGetFromTo(nil, req)
+
+		f.SetCellValue("Results", fmt.Sprintf("B%d", rowNum), resp[types.MongoDuration])
+		f.SetCellValue("Results", fmt.Sprintf("C%d", rowNum), resp[types.BlockchainDuration])
+		f.SetCellValue("Results", fmt.Sprintf("D%d", rowNum), resp[types.TotalDuration])
+		f.SetCellValue("Results", fmt.Sprintf("E%d", rowNum), resp[types.Missed])
+	}
+
+	if err := f.SaveAs(fileName); err != nil {
+		return fmt.Errorf("failed to save Excel file: %w", err)
+	}
+
+	if err := h.blockchain.StartMining(); err != nil {
+		log.Println("Error starting mining:", err)
+	}
+	utils.ResumeSimulatorFile()
+
+	return nil
+}
+
+func LogSendToFile(createdId uuid.UUID, mongoDuration, blockchainDuration, blockchainSendDuration time.Duration) {
+	fileName := fmt.Sprintf("D:\\Studia_mgr\\Praca_magisterska\\Results\\send_results_%s.xlsx", configs.Envs.BlockchainMode.String())
+	var f *excelize.File
+	if _, err := os.Stat(fileName); os.IsNotExist(err) {
+		f = excelize.NewFile()
+		f.SetSheetName("Sheet1", "Results")
+		f.SetCellValue("Results", "A1", "Timestamp")
+		f.SetCellValue("Results", "B1", "Id")
+		f.SetCellValue("Results", "C1", "Db duration")
+		f.SetCellValue("Results", "D1", "Blockchain duration")
+		f.SetCellValue("Results", "E1", "Blockchain send duration")
+	} else {
+		f, _ = excelize.OpenFile(fileName)
+	}
+
+	// Find next empty row
+	rows, _ := f.GetRows("Results")
+	rowNum := len(rows) + 1
+
+	f.SetCellValue("Results", fmt.Sprintf("A%d", rowNum), time.Now().Format(types.TimeLayout))
+	f.SetCellValue("Results", fmt.Sprintf("B%d", rowNum), createdId.String())
+	f.SetCellValue("Results", fmt.Sprintf("C%d", rowNum), mongoDuration.String())
+	f.SetCellValue("Results", fmt.Sprintf("D%d", rowNum), blockchainDuration.String())
+	f.SetCellValue("Results", fmt.Sprintf("E%d", rowNum), blockchainSendDuration.String())
+
+	f.SaveAs(fileName)
 }

@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.30;
 
 contract DataHashRegistry {
 
     struct DataRecord { 
         bytes32 dataHash;
         bytes16 iotId;
-        uint256 timestamp;
         address sender;
     } 
 
@@ -15,14 +14,23 @@ contract DataHashRegistry {
     event HashStored(bytes16 indexed id, bytes32 dataHash);
 
     function storeHash(bytes16 id, bytes32 dataHash, bytes16 iotId) external {
-        require(records[id].timestamp == 0, "Hash already exists for this Id");
+        require(id != bytes16(0), "Zero id not allowed");
+        require(dataHash != bytes32(0), "Zero hash not allowed");
+        require(iotId != bytes16(0), "Zero iotId not allowed");
 
-        records[id] = DataRecord(dataHash, iotId, block.timestamp, msg.sender);
+        DataRecord storage record = records[id];
+        require(record.dataHash == bytes32(0), "Hash already exists for this Id");
+        
+        records[id] = DataRecord(dataHash, iotId, msg.sender);
 
         emit HashStored(id, dataHash);
     }
 
     function verifyHash(bytes16 id, bytes32 providedHash) external view returns (bool) {
-        return records[id].dataHash == providedHash;
+        require(id == bytes16(0), "Zero id not allowed");
+        require(providedHash == bytes32(0), "Zero providedHash not allowed");
+
+        DataRecord storage record = records[id];
+        return record.dataHash == providedHash;
     }
 }

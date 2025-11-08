@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"os/exec"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -43,7 +44,7 @@ func NewEthClient(url, privateKeyHex, dataHashContractAddress, batchContractAddr
 		log.Println("Blockchain mode: Full")
 	case types.BCLightCheck:
 		log.Println("Blockchain mode: Light")
-	case types.BCBatchCheck:
+	case types.BCPeriodicBatchCheck:
 		log.Println("Blockchain mode: Batch")
 	}
 
@@ -106,7 +107,7 @@ func NewEthClient(url, privateKeyHex, dataHashContractAddress, batchContractAddr
 	var batchContract *smartContracts.BatchRegistry
 	var batchContractAddr common.Address
 
-	if configs.Envs.BlockchainMode == types.BCBatchCheck {
+	if configs.Envs.BlockchainMode == types.BCPeriodicBatchCheck {
 		if batchContractAddress == "" {
 			batchContractAddr, _, batchContract, err = smartContracts.DeployBatchRegistry(auth, client)
 			if err != nil {
@@ -149,13 +150,13 @@ func (c *Client) createOpt(ctx context.Context) bind.TransactOpts {
 		GasLimit:  c.auth.GasLimit,
 		GasTipCap: c.auth.GasTipCap,
 		GasFeeCap: c.auth.GasFeeCap,
-		Nonce:     c.nonceManager.Next(),
+		Nonce:     c.nonceManager.NextNonce(),
 	}
 }
 
-func (c *Client) Send(dataId uuid.UUID, hash [32]byte, deviceId uuid.UUID) (time.Duration, time.Duration, time.Duration, error) {
-	if configs.Envs.BlockchainMode == types.BCNone || configs.Envs.BlockchainMode == types.BCBatchCheck {
-		return 0, 0, 0, nil
+func (c *Client) Send(dataId uuid.UUID, hash [32]byte, deviceId uuid.UUID) (time.Duration, time.Duration, error) {
+	if configs.Envs.BlockchainMode == types.BCNone || configs.Envs.BlockchainMode == types.BCPeriodicBatchCheck {
+		return 0, 0, nil
 	}
 
 	start := time.Now()
@@ -168,29 +169,14 @@ func (c *Client) Send(dataId uuid.UUID, hash [32]byte, deviceId uuid.UUID) (time
 	sendStart := time.Now()
 	transaction, err := c.dataHashRegistry.StoreHash(&opt, dataId, hash, deviceId)
 	if err != nil {
-		return 0, 0, 0, fmt.Errorf("transaction send error: %w", err)
+		return 0, 0, fmt.Errorf("transaction send error: %w", err)
 	}
 	sendDuration := time.Since(sendStart)
 
-	var mineDuration time.Duration
-	if !configs.Envs.BlockchainAsyncMode {
-		mineStart := time.Now()
-		receipt, err := bind.WaitMined(ctx, c.ethClient, transaction)
-		if err != nil {
-			return 0, 0, 0, fmt.Errorf("wait mined error: %w", err)
-		}
-		if receipt.Status != 1 {
-			return 0, 0, 0, fmt.Errorf("transaction failed: %s", transaction.Hash().Hex())
-		}
-		mineDuration = time.Since(mineStart)
-
-		log.Println("Transaction hash:", transaction.Hash().Hex())
-	} else {
-		go c.mine(transaction)
-	}
+	go c.mine(transaction)
 
 	duration := time.Since(start)
-	return duration, sendDuration, mineDuration, nil
+	return duration, sendDuration, nil
 }
 
 func (c *Client) mine(transaction *typesEth.Transaction) {
@@ -210,8 +196,8 @@ func (c *Client) mine(transaction *typesEth.Transaction) {
 }
 
 func (c *Client) StoreRoot(startTimestamp time.Time, root [32]byte) error {
-	if configs.Envs.BlockchainMode != types.BCBatchCheck {
-		return fmt.Errorf("StoreRoot is only available in BCBatchCheck mode")
+	if configs.Envs.BlockchainMode != types.BCPeriodicBatchCheck {
+		return fmt.Errorf("storeRoot is only available in BCBatchCheck mode")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(configs.Envs.BlockchainContextTimeout)*2*time.Second)
@@ -248,7 +234,7 @@ func (c *Client) VerifyHash(dataId uuid.UUID, hash [32]byte, timestamp time.Time
 		success, err = verifyHashFullCheck(c, dataId, hash)
 	case types.BCLightCheck:
 		success, err = verifyHashLightCheck(c, dataId, hash)
-	case types.BCBatchCheck:
+	case types.BCPeriodicBatchCheck:
 		success, err = verifyHashBatchCheck(c, timestamp, hash, proof)
 	default:
 		return false, 0, fmt.Errorf("unknown blockchain mode")
@@ -280,8 +266,13 @@ func verifyHashLightCheck(c *Client, dataId uuid.UUID, hash [32]byte) (bool, err
 		return false, fmt.Errorf("failed to get events: %w", err)
 	}
 
-	for events.Next() {
+	if events.Next() {
 		event := events.Event
+
+		if events.Next() {
+			return false, fmt.Errorf("multiple events found for dataId: %v", dataId)
+		}
+
 		if event.Id == dataId && event.DataHash == hash {
 			return true, nil
 		}
@@ -311,7 +302,7 @@ func verifyHashBatchCheck(c *Client, timestamp time.Time, hash [32]byte, proof [
 	return success, nil
 }
 
-func (c *Client) VerifyHashes(docs []types.DocData, fromTimestamp time.Time, toTimestamp time.Time) (bool, time.Duration, error) {
+func (c *Client) VerifyHashes(docs []types.DocData, fromTimestamp time.Time, toTimestamp time.Time, isAudit bool) (bool, time.Duration, error) {
 	start := time.Now()
 
 	var success bool = true
@@ -319,11 +310,11 @@ func (c *Client) VerifyHashes(docs []types.DocData, fromTimestamp time.Time, toT
 
 	switch configs.Envs.BlockchainMode {
 	case types.BCFullCheck:
-		success, err = executeBlockchainFullCheck(c, docs)
+		success, err = executeBlockchainFullCheck(c, docs, isAudit)
 	case types.BCLightCheck:
-		success, err = executeBlockchainLightCheck(c, docs)
-	case types.BCBatchCheck:
-		success, err = executeBlockchainBatchCheck(c, docs, fromTimestamp, toTimestamp)
+		success, err = executeBlockchainLightCheck(c, docs, isAudit)
+	case types.BCPeriodicBatchCheck:
+		success, err = executeBlockchainBatchCheck(c, docs, fromTimestamp, toTimestamp, isAudit)
 	default:
 		return false, 0, fmt.Errorf("unknown blockchain mode")
 	}
@@ -332,25 +323,25 @@ func (c *Client) VerifyHashes(docs []types.DocData, fromTimestamp time.Time, toT
 	return success, duration, err
 }
 
-func executeBlockchainFullCheck(c *Client, docs []types.DocData) (bool, error) {
+func executeBlockchainFullCheck(c *Client, docs []types.DocData, isAudit bool) (bool, error) {
 	result := true
 
 	for _, doc := range docs {
 		hash, err := utils.CalculateHash(doc.Data)
 		if err != nil {
-			log.Printf("failed to calculate hash for doc with id: %v, hash: %x\n", doc.Id, hash)
+			log.Printf("failed to calculate hash for document with id: %v, hash: %x\n", doc.Id, hash)
 			result = false
 			continue
 		}
 
 		success, _, err := c.VerifyHash(doc.Id, hash, time.Time{}, nil)
 		if err != nil {
-			log.Printf("failed to verify hash for doc with id: %v, hash: %x\n", doc.Id, hash)
+			log.Printf("failed to verify hash for document with id: %v", doc.Id)
 			result = false
 			continue
 		}
 		if !success {
-			log.Printf("Blockchain check failed for doc with id: %v, hash: %x\n", doc.Id, hash)
+			log.Printf("Blockchain check failed for document with id: %v, hash: %x\n", doc.Id, hash)
 			result = false
 		}
 	}
@@ -363,25 +354,29 @@ type result struct {
 	Hash    [32]byte
 }
 
-func executeBlockchainLightCheck(c *Client, docs []types.DocData) (bool, error) {
+func executeBlockchainLightCheck(c *Client, docs []types.DocData, isAudit bool) (bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(configs.Envs.BlockchainContextTimeout)*time.Second)
 	defer cancel()
 
 	results := make(map[[16]byte]result, len(docs))
-	ids := make([][16]byte, len(docs))
+	ids := make([][16]byte, 0)
 
-	for _, doc := range docs {
-		id := doc.Id
-		hash, err := utils.CalculateHash(doc.Data)
-		if err != nil {
-			return false, fmt.Errorf("failed to calculate hash for doc with id: %v, error: %w", doc.Id, err)
-		}
+	if isAudit {
+		ids = nil
+	} else {
+		for _, doc := range docs {
+			id := doc.Id
+			hash, err := utils.CalculateHash(doc.Data)
+			if err != nil {
+				return false, fmt.Errorf("failed to calculate hash for document with id: %v, error: %w", doc.Id, err)
+			}
 
-		ids = append(ids, id)
+			ids = append(ids, id)
 
-		results[id] = result{
-			Success: false,
-			Hash:    hash,
+			results[id] = result{
+				Success: false,
+				Hash:    hash,
+			}
 		}
 	}
 
@@ -390,26 +385,24 @@ func executeBlockchainLightCheck(c *Client, docs []types.DocData) (bool, error) 
 		return false, fmt.Errorf("failed to get events: %w", err)
 	}
 
+	success := true
 	for events.Next() {
 		event := events.Event
 		if res, ok := results[event.Id]; ok {
 			if res.Hash == event.DataHash {
 				res.Success = true
 				results[event.Id] = res
+			} else {
+				success = false
+				log.Printf("failed to verify hash for document with id: %v", event.Id)
 			}
 		}
 	}
 
-	for id, res := range results {
-		if !res.Success {
-			return false, fmt.Errorf("blockchain check failed for doc with id: %v, hash: %x", id, res.Hash)
-		}
-	}
-
-	return true, nil
+	return success, nil
 }
 
-func executeBlockchainBatchCheck(c *Client, docs []types.DocData, from, to time.Time) (bool, error) {
+func executeBlockchainBatchCheck(c *Client, docs []types.DocData, from, to time.Time, isAudit bool) (bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(configs.Envs.BlockchainContextTimeout)*time.Second)
 	defer cancel()
 
@@ -450,7 +443,7 @@ func executeBlockchainBatchCheck(c *Client, docs []types.DocData, from, to time.
 		}
 		root, _, err := utils.CreateMerkleRoot(slotDocs)
 		if err != nil {
-			return false, fmt.Errorf("failed to create Merkle root for slot starting at %v: %w", slotStart, err)
+			log.Printf("failed to create Merkle root for slot starting at %v: %v", slotStart, err)
 		}
 		roots[slotStart] = root
 	}
@@ -458,10 +451,10 @@ func executeBlockchainBatchCheck(c *Client, docs []types.DocData, from, to time.
 	for slotStart, root := range roots {
 		success, err := c.batchRegistry.VerifyRoot(&bind.CallOpts{Context: ctx}, big.NewInt(slotStart.Unix()), root)
 		if err != nil {
-			return false, fmt.Errorf("failed to verify root for slot starting at %v: %w", slotStart, err)
+			log.Printf("failed to verify Merkle root for time slot starting at %v", slotStart)
 		}
 		if !success {
-			return false, fmt.Errorf("blockchain check failed for slot starting at %v with root %x", slotStart, root)
+			log.Printf("failed to verify Merkle root for time slot starting at %v", slotStart)
 		}
 	}
 
@@ -496,7 +489,7 @@ func (c *Client) GetBlockNumber() (uint64, error) {
 }
 
 func (c *Client) StopMining() error {
-	cmd := exec.Command("ssh", "-p "+configs.Envs.BlockchainServerPort, configs.Envs.BlockchainServerIP, "docker", "pause", configs.Envs.BlockchainValidators)
+	cmd := exec.Command("cmd", "/C", "docker pause "+configs.Envs.BlockchainValidators)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to stop container: %v - output: %s", err, output)
@@ -505,7 +498,7 @@ func (c *Client) StopMining() error {
 }
 
 func (c *Client) StartMining() error {
-	cmd := exec.Command("ssh", "-p "+configs.Envs.BlockchainServerPort, configs.Envs.BlockchainServerIP, "docker", "unpause", configs.Envs.BlockchainValidators)
+	cmd := exec.Command("cmd", "/C", "docker unpause "+configs.Envs.BlockchainValidators)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to start container: %v - output: %s", err, output)
@@ -515,18 +508,20 @@ func (c *Client) StartMining() error {
 }
 
 func (c *Client) IsMining() bool {
-	cmd := exec.Command("ssh", "-p "+configs.Envs.BlockchainServerPort, configs.Envs.BlockchainServerIP, "docker", "inspect", "--format={{.State.Running}}", configs.Envs.BlockchainValidators)
+	cmd := exec.Command("cmd", "/C", "docker inspect --format={{.State.Running}} "+configs.Envs.BlockchainValidators)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return false
 	}
 
-	lines := []string{}
-	for _, line := range string(output) {
-		if line == '\r' || line == '\n' {
-			continue
+	lines := strings.Split(string(output), "\n")
+
+	cleaned := []string{}
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			cleaned = append(cleaned, line)
 		}
-		lines = append(lines, string(line))
 	}
-	return !slices.Contains(lines, "false")
+	return !slices.Contains(cleaned, "false")
 }

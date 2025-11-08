@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -14,6 +16,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"github.com/mbabinski218/BaaS-IoT-platform/types"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -43,6 +46,15 @@ func ParseJSON(r *http.Request, v any) error {
 	}
 
 	return json.NewDecoder(r.Body).Decode(v)
+}
+
+func MapToBSON(payload types.NewDataPayload) bson.M {
+	doc := bson.M{
+		"_id":       ToBinaryUUID(payload.DataId),
+		"device_id": ToBinaryUUID(payload.DeviceId),
+		"data":      payload.Data,
+	}
+	return doc
 }
 
 func GetTokenFromRequest(r *http.Request) string {
@@ -200,4 +212,12 @@ func getMerkleProofSorted(tree [][][32]byte, index int) [][]byte {
 	}
 
 	return proof
+}
+
+func PauseSimulatorFile() error {
+	return os.WriteFile(filepath.Join("D:\\Studia_mgr\\Praca_magisterska\\Code\\BaaS-IoT-platform\\simulators", "pause.flag"), []byte("1"), 0644)
+}
+
+func ResumeSimulatorFile() error {
+	return os.WriteFile(filepath.Join("D:\\Studia_mgr\\Praca_magisterska\\Code\\BaaS-IoT-platform\\simulators", "pause.flag"), []byte("0"), 0644)
 }

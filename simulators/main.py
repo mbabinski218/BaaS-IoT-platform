@@ -17,6 +17,13 @@ DEVICE_GENERATORS = {
 lock = threading.Lock()
 counter = 0
 
+def is_paused():
+    try:
+        with open("D:\\Studia_mgr\\Praca_magisterska\\Code\\BaaS-IoT-platform\\simulators\\pause.flag", "r") as f:
+            return f.read().strip() == "1"
+    except FileNotFoundError:
+        return False
+
 def send_data_loop(device_index, number_to_add, device_type, frequency, backend_url, sin_mode=False):
     global counter, lock
 
@@ -29,8 +36,18 @@ def send_data_loop(device_index, number_to_add, device_type, frequency, backend_
     # Initialize device Id    
     device_id = uuid.uuid4().__str__()
 
+    # Create a session for requests
+    session = requests.Session()
+
     # Start sending data
     while number_to_add == 0 or counter < number_to_add:
+        if is_paused():
+            print(f"[Device {device_index}] Simulator is paused, waiting...")
+            time.sleep(0.1)
+            continue
+
+        start_time = time.time()
+
         with lock:
             counter += 1
 
@@ -55,22 +72,8 @@ def send_data_loop(device_index, number_to_add, device_type, frequency, backend_
         print(package)
 
         # Send the data to the backend
-        post_async(backend_url, package, device_index, data_id)
-
-        # Sleep for the specified frequency
-        if sin_mode:
-            t = time.time()
-            freq = frequency + math.sin(t) * (frequency / 2)
-            sleep_time = max(1, 1 / freq)
-        else:
-            sleep_time = frequency
-
-        time.sleep(sleep_time)
-
-def post_async(backend_url, package, device_index, data_id):
-    def send():
         try:
-            res = requests.post(f"{backend_url}/api/v1/send", json=package)
+            res = session.post(f"{backend_url}/api/v1/send", json=package)
             print(res.status_code)
             if res.status_code == 201:
                 print(f"[Device {device_index}] Data with id: {data_id} sent successfully.")
@@ -78,8 +81,17 @@ def post_async(backend_url, package, device_index, data_id):
                 print(f"[Device {device_index}] Failed to send data with id: {data_id}, code: {res.status_code}, res: {res.text}")
         except Exception as e:
             print(f"[Device {device_index}] Failed to send data with id: {data_id}, error: {e}")
-    
-    threading.Thread(target=send, daemon=True).start()
+
+        # Sleep for the specified frequency
+        if sin_mode:
+            t = time.time()
+            freq = frequency + math.sin(t) * (frequency / 2)
+            sleep_time = max(1, 1 / freq)
+        else:
+            elapsed = time.time() - start_time
+            sleep_time = max(0, frequency - elapsed)
+
+        time.sleep(sleep_time)
 
 if __name__ == '__main__':
     # Parse command line arguments
