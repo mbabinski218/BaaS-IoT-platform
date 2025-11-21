@@ -5,10 +5,10 @@ from pathlib import Path
 
 forDb = False
 files = {
-    20:    Path("Long/Batch/Id/getById_checkpoint_results_20.xlsx"),
-    2000:  Path("Long/Batch/Id/getById_checkpoint_results_2000.xlsx"),
-    8000:  Path("Long/Batch/Id/getById_checkpoint_results_8000.xlsx"),
-    16000: Path("Long/Batch/Id/getById_checkpoint_results_16000.xlsx"),
+    20:    Path("Long/Full/Id/getById_checkpoint_results_20.xlsx"),
+    2000:  Path("Long/Full/Id/getById_checkpoint_results_2000.xlsx"),
+    8000:  Path("Long/Full/Id/getById_checkpoint_results_8000.xlsx"),
+    16000: Path("Long/Full/Id/getById_checkpoint_results_16000.xlsx"),
 }
 sheet_name = "Results"
 groups = ["First", "Center", "Last"]
@@ -24,7 +24,7 @@ BC_COLS = {
     "Last":   "Last - Blockchain duration",
 }
 
-out_dir = Path("Long_plots/Batch/id")
+out_dir = Path("Long_plots/Full/id")
 out_dir.mkdir(parents=True, exist_ok=True)
 
 def parse_duration(val):
@@ -89,6 +89,8 @@ def plot_single(data_list, ylabel, out_png, blocks, which):
         print(f"    Std Dev = {std:.3f} ms")
 
     plt.ylabel(ylabel)
+    # plt.xlabel("Document positions in the database")
+    plt.xlabel("Position of the document hash in the blockchain")
     plt.legend()
     plt.tight_layout()
     plt.savefig(out_png, dpi=300, bbox_inches="tight")

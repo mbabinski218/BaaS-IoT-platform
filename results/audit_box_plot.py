@@ -94,6 +94,7 @@ def make_multi_boxplot(values_list: list[np.ndarray],
         print(f"    Max     = {vmax:.3f} ms")
         print(f"    Mean    = {mean:.3f} ms")
         print(f"    Std Dev = {std:.3f} ms")
+        print(f"    IQR     = {q3 - q1:.3f} ms")
 
     if log_scale:
         plt.yscale("log")
